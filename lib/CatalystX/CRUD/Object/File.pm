@@ -12,7 +12,7 @@ use overload(
 
 __PACKAGE__->mk_accessors(qw( buffer ));
 
-our $VERSION = '0.02';
+our $VERSION = '0.03';
 
 =head1 NAME
 
@@ -119,6 +119,8 @@ sub delete {
 
 sub _write {
     my $self = shift;
+    my $dir = $self->delegate->dir;
+    $dir->mkpath;
     my $fh   = $self->delegate->openw();
     print {$fh} $self->buffer;
     $fh->close;

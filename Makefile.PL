@@ -17,6 +17,7 @@ WriteMakefile(
         'Catalyst::Exception'   => 0,
         'Path::Class::File'     => 0,
         'NEXT'                  => 0,
+        'Data::Dump'            => 0,  # for testing
 
 
     },

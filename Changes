@@ -9,5 +9,8 @@ Revision history for CatalystX-CRUD
           added the form_to_object() method in Controller.
         * New File example implementation of the whole Model/Object/Iterator API.
 
-
+0.03    22 October 2007
+        * add test for File implementation (and fix the bugs it revealed)
+        * fix AUTOLOAD to ignore DESTROY
+        
 

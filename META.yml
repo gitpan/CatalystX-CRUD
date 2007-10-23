@@ -1,7 +1,7 @@
 # http://module-build.sourceforge.net/META-spec.html
 #XXXXXXX This is a prototype!!!  It will change in the future!!! XXXXX#
 name:         CatalystX-CRUD
-version:      0.02
+version:      0.03
 version_from: lib/CatalystX/CRUD.pm
 installdirs:  site
 requires:
@@ -9,6 +9,7 @@ requires:
     Catalyst::Exception:           0
     Catalyst::Runtime:             0
     Class::Accessor::Fast:         0
+    Data::Dump:                    0
     Data::Pageset:                 0
     NEXT:                          0
     Path::Class::File:             0

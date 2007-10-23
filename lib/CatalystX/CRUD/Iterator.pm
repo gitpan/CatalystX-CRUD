@@ -6,7 +6,7 @@ use base qw( CatalystX::CRUD );
 
 #use UNIVERSAL qw( isa can );   # do we need this??
 
-our $VERSION = '0.02';
+our $VERSION = '0.03';
 
 =head1 NAME
 

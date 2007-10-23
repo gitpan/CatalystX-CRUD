@@ -6,7 +6,7 @@ use Carp;
 
 __PACKAGE__->mk_ro_accessors(qw( delegate ));
 
-our $VERSION = '0.02';
+our $VERSION = '0.03';
 
 =head1 NAME
 
@@ -82,6 +82,7 @@ sub AUTOLOAD {
     my $class  = ref($self) || $self;
     my $method = $AUTOLOAD;
     $method =~ s/.*://;
+    return if $method eq 'DESTROY';
     if ( $self->delegate->can($method) ) {
         return $self->delegate->$method(@_);
     }

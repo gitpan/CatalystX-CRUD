@@ -5,8 +5,9 @@ use base qw( CatalystX::CRUD::Model );
 use File::Find;
 use Carp;
 use Data::Dump qw( dump );
+use Path::Class::File;
 
-our $VERSION = '0.02';
+our $VERSION = '0.03';
 
 =head1 NAME
 
@@ -65,7 +66,9 @@ sub fetch {
 
     # look through inc_path
     for my $dir ( @{ $self->inc_path } ) {
-        my $test = $self->object_class->new( $dir, $file );
+        my $test = $self->object_class->new(
+            file => Path::Class::File->new( $dir, $file ) );
+
         if ( -s $test ) {
             $file = $test;
             $file->read;
