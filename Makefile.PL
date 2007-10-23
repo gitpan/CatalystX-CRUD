@@ -10,9 +10,14 @@ WriteMakefile(
     PL_FILES            => {},
     PREREQ_PM => {
         'Test::More' => 0,
-        'Catalyst-Runtime' => 5.7,
         'Data::Pageset'    => 0,
         'Class::Accessor::Fast' => 0,
+        'Catalyst::Component::ACCEPT_CONTEXT' => 0,
+        'Catalyst::Runtime'     => 0,
+        'Catalyst::Exception'   => 0,
+        'Path::Class::File'     => 0,
+        'NEXT'                  => 0,
+
 
     },
     dist                => { COMPRESS => 'gzip -9f', SUFFIX => 'gz', },

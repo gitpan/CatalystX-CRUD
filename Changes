@@ -3,3 +3,11 @@ Revision history for CatalystX-CRUD
 0.01    3 October 2007
         First version, released on an unsuspecting world.
 
+0.02    22 October 2007
+        * Fixed Makefile.PL dependencies (added Catalyst::Component::ACCEPT_CONTEXT)
+        * Refactored Controller and Model to abstract a little more, notably
+          added the form_to_object() method in Controller.
+        * New File example implementation of the whole Model/Object/Iterator API.
+
+
+

@@ -6,7 +6,8 @@ use base qw(
     Catalyst::Controller
 );
 use Carp;
-use Data::Pageset;
+
+our $VERSION = '0.02';
 
 =head1 NAME
 
@@ -204,42 +205,17 @@ sub save : PathPart Chained('fetch') Args(0) {
         $self->throw_error('Permission denied');
         return;
     }
-    my $f     = $c->stash->{form};
-    my $o     = $c->stash->{object};
-    my $ometh = $self->init_object;
-    my $fmeth = $self->init_form;
-    my $id    = $c->stash->{object_id};
-    my $pk    = $self->primary_key;
 
-    # initialize the form with the object's values
-    $f->$fmeth( $o->delegate );
-
-    # set param values from request
-    $f->params( $self->param_hash($c) );
-
-    # id always comes from url but not necessarily from form
-    $f->param( $pk, $id );
-
-    # override object's values with those from params
-    $f->init_fields();
-
-    # return if there was a problem with any param values
-    unless ( $f->validate() ) {
-        $c->stash->{error} = $f->error;    # NOT throw_error()
-        $c->stash->{template} ||= $self->default_template;    # MUST specify
-        return 0;
-    }
-
-    # re-set object's values from the now-valid form
-    $f->$ometh( $o->delegate );
+    # get a valid object
+    my $obj = $self->form_to_object($c);
 
     # write our changes
-    unless ( $self->precommit( $c, $o ) ) {
+    unless ( $self->precommit( $c, $obj ) ) {
         $c->stash->{template} ||= $self->default_template;
         return 0;
     }
-    $self->save_obj( $c, $o );
-    $self->postcommit( $c, $o );
+    $self->save_obj( $c, $obj );
+    $self->postcommit( $c, $obj );
 
     1;
 }
@@ -322,23 +298,16 @@ method it will be called before returning.
 
 =cut
 
-=head2 param_hash( I<context> )
-
-Returns a hashref of the param values in the current request from I<context>.
-This is equivalent to:
-
- $c->req->params;
-
-but is given its own method to make it easier to modify the params if needed.
-
-This method is used by save() to populate the C<form>.
-
-=cut
-
-sub param_hash {
+sub form {
     my $self = shift;
-    my $c = shift or $self->throw_error("context required");
-    return $c->req->params;
+    $self->{_form} ||= $self->form_class->new;
+    if ( $self->{_form}->can('clear') ) {
+        $self->{_form}->clear;
+    }
+    elsif ( $self->{_form}->can('reset') ) {
+        $self->{_form}->reset;
+    }
+    return $self->{_form};
 }
 
 =head2 can_read( I<context> )
@@ -360,6 +329,22 @@ the C<object> in stash().
 =cut
 
 sub can_write {1}
+
+=head2 form_to_object( I<context> )
+
+Should return an object ready to be handed to save_obj(). This is the primary
+method to override in your subclass, since it will handle all the form validation
+and population of the object.
+
+Will throw_error() if not overridden.
+
+See CatalystX::CRUD::Controller::RHTMLO for an example.
+
+=cut
+
+sub form_to_object {
+    shift->throw_error("must override form_to_object()");
+}
 
 =head2 save_obj( I<context>, I<object> )
 
@@ -414,8 +399,13 @@ and search().
 
 sub do_search {
     my ( $self, $c, @arg ) = @_;
-    my $query   = $c->model( $self->model_name )->make_query( $c, @arg );
-    my $count   = $c->model( $self->model_name )->count($query);
+
+    # stash the form so it can be re-displayed
+    # subclasses must stick-ify it in their own way.
+    $c->stash->{form} ||= $self->form;
+
+    my $query = $c->model( $self->model_name )->make_query( $c, @arg );
+    my $count = $c->model( $self->model_name )->count($query) || 0;
     my $results = $c->model( $self->model_name )->search($query);
     if (   $count == 1
         && ( my $uri = $self->view_on_single_result( $c, $results ) )
@@ -423,35 +413,17 @@ sub do_search {
     {
         $c->response->redirect($uri);
     }
+    elsif ( $count == 0 ) {
+        $c->stash->{results} = { count => $count, results => $results };
+    }
     else {
         $c->stash->{results} = {
-            count   => $count,
-            pager   => $self->make_pager( $c, $count, $results ),
+            count => $count,
+            pager => $c->model( $self->model_name )
+                ->make_pager( $count, $results ),
             results => $results
         };
     }
-}
-
-=head2 make_pager( I<context>, I<total>, I<results> )
-
-Returns a Data::Pageset object using I<total>,
-either the C<page_size> param or the value of page_size(),
-and the C<page> param or C<1>.
-
-=cut
-
-sub make_pager {
-    my ( $self, $c, $count, $results ) = @_;
-    return Data::Pageset->new(
-        {   total_entries    => $count,
-            entries_per_page => $c->req->param('page_size')
-                || $self->page_size,
-            current_page => $c->req->param('page') || 1,
-            pages_per_set => 10,
-            mode          => 'slide',
-        }
-    );
-
 }
 
 =head1 CONVENIENCE METHODS
@@ -487,7 +459,6 @@ sub model_name            { shift->config->{model_name} }
 sub default_template      { shift->config->{default_template} }
 sub primary_key           { shift->config->{primary_key} }
 sub view_on_single_result { shift->config->{view_on_single_result} }
-sub page_size             { shift->config->{page_size} }
 
 # see http://use.perl.org/~LTjake/journal/31738
 # PathPrefix will likely end up in an official Catalyst RSN.
@@ -543,6 +514,8 @@ L<http://search.cpan.org/dist/CatalystX-CRUD>
 =back
 
 =head1 ACKNOWLEDGEMENTS
+
+This module based on Catalyst::Controller::Rose::CRUD by the same author.
 
 =head1 COPYRIGHT & LICENSE
 

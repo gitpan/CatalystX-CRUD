@@ -6,6 +6,8 @@ use Carp;
 
 __PACKAGE__->mk_ro_accessors(qw( delegate ));
 
+our $VERSION = '0.02';
+
 =head1 NAME
 
 CatalystX::CRUD::Object - an instance returned from a CatalystX::CRUD::Model
@@ -66,7 +68,7 @@ slept here."
 =head2 AUTOLOAD
 
 The magic AUTOLOAD method will attempt to call the requested method on the delegate()
-object if possible, and croak otherwise. This supports transparent calling of delegate()
+object if possible, and throw_error() otherwise. This supports transparent calling of delegate()
 methods on the CXCO object itself.
 
  $object->foo;   # same as $object->delegate->foo
@@ -83,7 +85,7 @@ sub AUTOLOAD {
     if ( $self->delegate->can($method) ) {
         return $self->delegate->$method(@_);
     }
-    croak "method '$method' not implemented in class '$class'";
+    $self->throw_error( "method '$method' not implemented in class '$class'" );
 }
 
 =head1 REQUIRED METHODS

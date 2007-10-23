@@ -2,7 +2,11 @@ package CatalystX::CRUD::Iterator;
 use strict;
 use warnings;
 use Carp;
-use UNIVERSAL qw( isa can );
+use base qw( CatalystX::CRUD );
+
+#use UNIVERSAL qw( isa can );   # do we need this??
+
+our $VERSION = '0.02';
 
 =head1 NAME
 
@@ -25,7 +29,7 @@ CatalystX::CRUD::Iterator - generic iterator wrapper for CXCM iterator() results
      return CatalystX::CRUD::Iterator->new(
                                         $iterator,
                                         $self->object_class,
-                                        'container'
+                                        'delegate'
                                         );
  }
 
@@ -46,7 +50,7 @@ Returns a CatalystX::CRUD::Iterator instance.
 
 I<iterator> must have a next() method and (optionally) a finish() method.
 
-I<method_name> defaults to C<container>.
+I<method_name> defaults to C<delegate>.
 
 See next().
 
@@ -55,38 +59,34 @@ See next().
 # hasa a CXCM iterator() result and calls its next() method,
 # wrapping the result in the Iterator's CXCO class instance
 
-sub new
-{
-    my $class       = shift;
-    my $iterator    = shift or croak "need an iterator object";
-    my $cxco_class  = shift or croak "need the name of a CXCO class";
-    my $cxco_method = shift || 'container';
+sub new {
+    my $class      = shift;
+    my $iterator   = shift or $class->throw_error("need an iterator object");
+    my $cxco_class = shift
+        or $class->throw_error("need the name of a CXCO class");
+    my $cxco_method = shift || 'delegate';
 
     # sanity checks
-    unless ($iterator->can('next'))
-    {
-        croak "iterator $iterator has no next() method";
+    unless ( $iterator->can('next') ) {
+        $class->throw_error("iterator $iterator has no next() method");
     }
 
-    unless ($cxco_class->can('new'))
-    {
-        croak "no new() method defined for $cxco_class";
+    unless ( $cxco_class->can('new') ) {
+        $class->throw_error("no new() method defined for $cxco_class");
     }
 
-    unless ($cxco_class->isa('CatalystX::CRUD::Object'))
-    {
-        croak "$cxco_class does not inherit from CatalystX::CRUD::Object";
+    unless ( $cxco_class->isa('CatalystX::CRUD::Object') ) {
+        $class->throw_error(
+            "$cxco_class does not inherit from CatalystX::CRUD::Object");
     }
 
-    return
-      bless(
-            {
-             iterator => $iterator,
-             cxco     => $cxco_class,
-             method   => $cxco_method
-            },
-            $class
-           );
+    return bless(
+        {   iterator => $iterator,
+            cxco     => $cxco_class,
+            method   => $cxco_method
+        },
+        $class
+    );
 }
 
 =head2 next
@@ -97,8 +97,7 @@ under the I<method_name> accessor.
 
 =cut
 
-sub next
-{
+sub next {
     my $self = shift;
     my $next = $self->{iterator}->next;
     return unless defined($next);
@@ -116,11 +115,9 @@ this will call and return it. Otherwise returns true (1).
 
 =cut
 
-sub finish
-{
+sub finish {
     my $self = shift;
-    if ($self->{iterator}->can('finish'))
-    {
+    if ( $self->{iterator}->can('finish') ) {
         return $self->{iterator}->finish;
     }
     return 1;

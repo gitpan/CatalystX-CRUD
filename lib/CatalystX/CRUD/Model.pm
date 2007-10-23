@@ -7,6 +7,9 @@ use base qw(
     Catalyst::Model
 );
 use Carp;
+use Data::Pageset;
+
+our $VERSION = '0.02';
 
 __PACKAGE__->mk_accessors(qw( object_class ));
 
@@ -16,9 +19,14 @@ CatalystX::CRUD::Model - base class for CRUD models
 
 =head1 SYNOPSIS
 
- package MyApp::Model;
+ package MyApp::Model::Foo;
  use base qw( CatalystX::CRUD::Model );
  
+ __PACKAGE__->config(
+                    object_class    => 'MyApp::Foo',
+                    page_size       => 50,
+                    );
+                     
  # must define the following methods
  sub new_object { }
  sub fetch      { }
@@ -101,7 +109,41 @@ sub Xsetup {
         }
         $self->object_class($class);
     }
+    if ( !exists $self->config->{page_size} ) {
+        $self->config->{page_size} = 50;
+    }
     return $self;
+}
+
+=head2 page_size
+
+Returns the C<page_size> set in config().
+
+=cut
+
+sub page_size { shift->config->{page_size} }
+
+=head2 make_pager( I<total>, I<results> )
+
+Returns a Data::Pageset object using I<total>,
+either the C<page_size> param or the value of page_size(),
+and the C<page> param or C<1>.
+
+=cut
+
+sub make_pager {
+    my ( $self, $count, $results ) = @_;
+    my $c = $self->context;
+    return Data::Pageset->new(
+        {   total_entries    => $count,
+            entries_per_page => $c->req->param('page_size')
+                || $self->page_size,
+            current_page => $c->req->param('page')
+                || 1,
+            pages_per_set => 10,        #TODO make this configurable?
+            mode          => 'slide',
+        }
+    );
 }
 
 =head2 new_object
@@ -251,8 +293,6 @@ L<http://rt.cpan.org/NoAuth/Bugs.html?Dist=CatalystX-CRUD>
 L<http://search.cpan.org/dist/CatalystX-CRUD>
 
 =back
-
-=head1 ACKNOWLEDGEMENTS
 
 =head1 COPYRIGHT & LICENSE
 

@@ -1,6 +1,6 @@
 #!perl -T
 
-use Test::More tests => 5;
+use Test::More tests => 8;
 
 BEGIN {
 	use_ok( 'CatalystX::CRUD' );
@@ -8,6 +8,9 @@ BEGIN {
         use_ok( 'CatalystX::CRUD::Controller' );
         use_ok( 'CatalystX::CRUD::Object' );
         use_ok( 'CatalystX::CRUD::Iterator' );
+        use_ok( 'CatalystX::CRUD::Model::File' );
+        use_ok( 'CatalystX::CRUD::Object::File' );
+        use_ok( 'CatalystX::CRUD::Iterator::File' );
 }
 
 diag( "Testing CatalystX::CRUD $CatalystX::CRUD::VERSION, Perl $], $^X" );
