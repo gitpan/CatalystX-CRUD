@@ -7,7 +7,7 @@ use base qw(
 );
 use Carp;
 
-our $VERSION = '0.03';
+our $VERSION = '0.04';
 
 =head1 NAME
 
@@ -27,7 +27,7 @@ CatalystX::CRUD::Controller - base class for CRUD controllers
                     default_template        => 'path/to/foo/edit.tt',
                     model_name              => 'Foo',
                     primary_key             => 'id',
-                    view_on_single_result   => 1,
+                    view_on_single_result   => 0,
                     page_size               => 50,
                     );
                     
@@ -390,6 +390,28 @@ sub postcommit {
     1;
 }
 
+=head2 view_on_single_result( I<context>, I<results> )
+
+Returns 0 unless the config() key of the same name is true.
+
+Otherwise, calls the primary_key() value on the first object
+in I<results> and constructs a uri_for() value to the edit()
+action in the same class as the current action.
+
+=cut
+
+sub view_on_single_result {
+    my ( $self, $c, $results ) = @_;
+    return 0 unless $self->config->{view_on_single_result};
+    my $pk  = $self->primary_key;
+    my $obj = $results->[0];
+
+    # the append . '' is to force stringify anything
+    # that might be an object with overloading. Otherwise
+    # uri_for() assumes it is an Action object.
+    return $c->uri_for( $obj->$pk . '', 'edit' );
+}
+
 =head2 do_search( I<context>, I<arg> )
 
 Prepare and execute a search. Called internally by list()
@@ -403,6 +425,10 @@ sub do_search {
     # stash the form so it can be re-displayed
     # subclasses must stick-ify it in their own way.
     $c->stash->{form} ||= $self->form;
+
+    # turn flag on if explicitly turned off
+    $c->stash->{view_on_single_result} = 1
+        unless exists $c->stash->{view_on_single_result};
 
     my $query = $c->model( $self->model_name )->make_query( $c, @arg );
     my $count = $c->model( $self->model_name )->count($query) || 0;
@@ -444,21 +470,18 @@ The following methods simply return the config() value of the same name.
 
 =item primary_key
 
-=item view_on_single_result
-
 =item page_size
 
 =back
 
 =cut
 
-sub form_class            { shift->config->{form_class} }
-sub init_form             { shift->config->{init_form} }
-sub init_object           { shift->config->{init_object} }
-sub model_name            { shift->config->{model_name} }
-sub default_template      { shift->config->{default_template} }
-sub primary_key           { shift->config->{primary_key} }
-sub view_on_single_result { shift->config->{view_on_single_result} }
+sub form_class       { shift->config->{form_class} }
+sub init_form        { shift->config->{init_form} }
+sub init_object      { shift->config->{init_object} }
+sub model_name       { shift->config->{model_name} }
+sub default_template { shift->config->{default_template} }
+sub primary_key      { shift->config->{primary_key} }
 
 # see http://use.perl.org/~LTjake/journal/31738
 # PathPrefix will likely end up in an official Catalyst RSN.

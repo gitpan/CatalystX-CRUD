@@ -1,4 +1,4 @@
-use Test::More tests => 3;
+use Test::More tests => 5;
 
 BEGIN {
     use lib qw( ../CatalystX-CRUD/lib );
@@ -11,4 +11,11 @@ use Catalyst::Test 'MyApp';
 use Data::Dump qw( dump );
 
 ok( get('/foo'), "get /foo" );
+
+ok( my $response = request('/file/search'),  "response for /file/search");
+
+#dump( $response->headers );
+
+is( $response->headers->{status}, '302',     "response was redirect");
+
 

@@ -19,4 +19,5 @@ t/01-file.t
 t/lib/MyApp.pm
 t/lib/MyApp/File.pm
 t/lib/MyApp/Model/File.pm
+t/lib/MyApp/Controller/File.pm
 META.yml                                 Module meta-data (added by MakeMaker)

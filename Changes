@@ -13,4 +13,7 @@ Revision history for CatalystX-CRUD
         * add test for File implementation (and fix the bugs it revealed)
         * fix AUTOLOAD to ignore DESTROY
         
+0.04    25 October 2007
+        * rework view_on_single_result API in base Controller and tests for same
+
 
