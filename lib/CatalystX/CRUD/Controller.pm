@@ -7,7 +7,7 @@ use base qw(
 );
 use Carp;
 
-our $VERSION = '0.04';
+our $VERSION = '0.05';
 
 =head1 NAME
 
@@ -107,6 +107,7 @@ The I<primary_key> value is saved in stash() as C<object_id>.
 sub fetch : Chained('/') PathPrefix CaptureArgs(1) {
     my ( $self, $c, $id ) = @_;
     $c->stash->{object_id} = $id;
+    $c->log->debug("fetching id = $id") if $c->debug;
     my @arg = $id ? ( $self->primary_key() => $id ) : ();
     $c->stash->{object} = $c->model( $self->model_name )->fetch(@arg);
     if ( $self->has_errors($c) or !$c->stash->{object} ) {
@@ -426,11 +427,17 @@ sub do_search {
     # subclasses must stick-ify it in their own way.
     $c->stash->{form} ||= $self->form;
 
+    # if we have no input, just return for initial search
+    if(!@arg && !$c->req->param && $c->action eq 'search')
+    {
+        return;
+    }
+
     # turn flag on if explicitly turned off
     $c->stash->{view_on_single_result} = 1
         unless exists $c->stash->{view_on_single_result};
 
-    my $query = $c->model( $self->model_name )->make_query( $c, @arg );
+    my $query = $c->model( $self->model_name )->make_query( @arg );
     my $count = $c->model( $self->model_name )->count($query) || 0;
     my $results = $c->model( $self->model_name )->search($query);
     if (   $count == 1
@@ -447,7 +454,8 @@ sub do_search {
             count => $count,
             pager => $c->model( $self->model_name )
                 ->make_pager( $count, $results ),
-            results => $results
+            results => $results,
+            query   => $query,
         };
     }
 }

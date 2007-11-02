@@ -1,4 +1,4 @@
-use Test::More tests => 5;
+use Test::More tests => 6;
 
 BEGIN {
     use lib qw( ../CatalystX-CRUD/lib );
@@ -12,10 +12,11 @@ use Data::Dump qw( dump );
 
 ok( get('/foo'), "get /foo" );
 
-ok( my $response = request('/file/search'),  "response for /file/search");
+ok( my $response = request('/file/search'), "response for /file/search" );
 
 #dump( $response->headers );
 
-is( $response->headers->{status}, '302',     "response was redirect");
+is( $response->headers->{status}, '302', "response was redirect" );
 
+ok( get('/autoload'), "get /autoload" );
 

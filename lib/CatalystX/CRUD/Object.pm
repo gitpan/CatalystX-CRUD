@@ -6,7 +6,7 @@ use Carp;
 
 __PACKAGE__->mk_ro_accessors(qw( delegate ));
 
-our $VERSION = '0.04';
+our $VERSION = '0.05';
 
 =head1 NAME
 
@@ -65,29 +65,6 @@ for the delegate to inhabit.
 Think of delegate as a noun, not a verb, as in "The United Nations delegate often
 slept here."
 
-=head2 AUTOLOAD
-
-The magic AUTOLOAD method will attempt to call the requested method on the delegate()
-object if possible, and throw_error() otherwise. This supports transparent calling of delegate()
-methods on the CXCO object itself.
-
- $object->foo;   # same as $object->delegate->foo
-
-=cut
-
-our $AUTOLOAD;
-
-sub AUTOLOAD {
-    my $self   = shift;
-    my $class  = ref($self) || $self;
-    my $method = $AUTOLOAD;
-    $method =~ s/.*://;
-    return if $method eq 'DESTROY';
-    if ( $self->delegate->can($method) ) {
-        return $self->delegate->$method(@_);
-    }
-    $self->throw_error( "method '$method' not implemented in class '$class'" );
-}
 
 =head1 REQUIRED METHODS
 

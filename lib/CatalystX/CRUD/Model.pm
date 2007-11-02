@@ -9,7 +9,7 @@ use base qw(
 use Carp;
 use Data::Pageset;
 
-our $VERSION = '0.04';
+our $VERSION = '0.05';
 
 __PACKAGE__->mk_accessors(qw( object_class ));
 
@@ -105,9 +105,41 @@ sub Xsetup {
         my $class = $self->config->{object_class};
         eval "require $class";
         if ($@) {
-            $self->throw_error("$class could not be loaded");
+            $self->throw_error("$class could not be loaded: $@");
         }
         $self->object_class($class);
+
+        # some black magic hackery to make Object classes act like
+        # they're overloaded delegate()s
+        {
+            no strict 'refs';
+            no warnings 'redefine';
+            *{ $class . '::AUTOLOAD' } = sub {
+                my $obj       = shift;
+                my $obj_class = ref($self) || $self;
+                my $method    = shift || our $AUTOLOAD;
+                $method =~ s/.*://;
+                return if $method eq 'DESTROY';
+                if ( $obj->delegate->can($method) ) {
+                    return $obj->delegate->$method(@_);
+                }
+
+                $obj->throw_error(
+                    "method '$method' not implemented in class '$obj_class'");
+
+            };
+
+            # this overrides the basic $class->can
+            # to always call secondary can() on its delegate.
+            # we have to UNIVERSAL::can because we are overriding can()
+            # in $class and would otherwise have a recursive nightmare.
+            *{ $class . '::can' } = sub {
+                my ( $obj_class, $method ) = @_;
+                return UNIVERSAL::can($class, $method) || $obj_class->AUTOLOAD($method);
+            };
+
+        }
+
     }
     if ( !exists $self->config->{page_size} ) {
         $self->config->{page_size} = 50;
@@ -126,8 +158,8 @@ sub page_size { shift->config->{page_size} }
 =head2 make_pager( I<total>, I<results> )
 
 Returns a Data::Pageset object using I<total>,
-either the C<page_size> param or the value of page_size(),
-and the C<page> param or C<1>.
+either the C<_page_size> param or the value of page_size(),
+and the C<_page> param or C<1>.
 
 =cut
 
@@ -136,9 +168,9 @@ sub make_pager {
     my $c = $self->context;
     return Data::Pageset->new(
         {   total_entries    => $count,
-            entries_per_page => $c->req->param('page_size')
+            entries_per_page => $c->req->param('_page_size')
                 || $self->page_size,
-            current_page => $c->req->param('page')
+            current_page => $c->req->param('_page')
                 || 1,
             pages_per_set => 10,        #TODO make this configurable?
             mode          => 'slide',

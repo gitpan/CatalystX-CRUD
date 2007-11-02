@@ -16,4 +16,11 @@ Revision history for CatalystX-CRUD
 0.04    25 October 2007
         * rework view_on_single_result API in base Controller and tests for same
 
+0.05    1 November 2007
+        * stash query in Controller results for View
+        * do_search() returns if no input
+        * Model reserved params now start with _
+        * some can/AUTOLOAD black magic to make Object/delegate stuff DWIM.
+
+
 

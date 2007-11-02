@@ -12,7 +12,7 @@ __PACKAGE__->setup();
 sub foo : Local {
 
     my ( $self, $c, @arg ) = @_;
-  
+
     my ( undef, $tempf ) = tempfile();
 
     # have to set inc_path() after we create our first file
@@ -43,8 +43,7 @@ sub foo : Local {
 
     $file->read;
 
-    if ($file->buffer ne 'hello world')
-    {
+    if ( $file->buffer ne 'hello world' ) {
         croak "bad read";
     }
 
@@ -59,6 +58,50 @@ sub foo : Local {
     $file->delete;
 
     $c->res->body("foo is a-ok");
+
+}
+
+sub autoload : Local {
+    my ( $self, $c ) = @_;
+
+    my ( undef, $tempf ) = tempfile();
+
+    # have to set inc_path() after we create our first file
+    # so that we know where the temp dir is.
+
+    my $file = $c->model('File')->new_object( file => $tempf );
+
+    warn "testing basename on $file";
+
+    # test that calling $file->foo actually calls foo()
+    # on $file->delegate and not $file itself
+    eval { $file->basename };
+    if ($@) {
+        warn "failed to call ->basename on $file: $@";
+        return;
+    }
+
+    unless ( $file->can('basename') ) {
+        warn "can't can(basename) but can ->basename";
+        return;
+    }
+
+    # test that we can still call read() and can(read) on the parent object
+    eval { $file->read };
+    if ($@) {
+        warn "$file cannot read() - $@ $!";
+        return;
+    }
+
+    eval { $file->can('read') };
+    if ($@) {
+        warn "$file cannot can(read) - $@ $!";
+        return;
+    }
+  
+
+
+    $c->res->body("autoload is a-ok");
 
 }
 
