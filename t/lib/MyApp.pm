@@ -3,9 +3,9 @@ use Catalyst::Runtime '5.70';
 use Catalyst;
 use Carp;
 use Data::Dump qw( dump );
-use File::Temp 'tempfile';
+use File::Temp;
 
-our $VERSION = '0.01';
+our $VERSION = '0.02';
 
 __PACKAGE__->setup();
 
@@ -13,14 +13,14 @@ sub foo : Local {
 
     my ( $self, $c, @arg ) = @_;
 
-    my ( undef, $tempf ) = tempfile();
+    my $tempf = File::Temp->new;
 
     # have to set inc_path() after we create our first file
     # so that we know where the temp dir is.
 
     #carp "inc_path: " . dump $c->model('File')->inc_path;
 
-    my $file = $c->model('File')->new_object( file => $tempf );
+    my $file = $c->model('File')->new_object( file => $tempf->filename );
 
     #carp dump $file;
 
@@ -55,8 +55,6 @@ sub foo : Local {
 
     $file = $c->model('File')->fetch( file => $filename );
 
-    $file->delete;
-
     $c->res->body("foo is a-ok");
 
 }
@@ -64,14 +62,14 @@ sub foo : Local {
 sub autoload : Local {
     my ( $self, $c ) = @_;
 
-    my ( undef, $tempf ) = tempfile();
+    my $tempf = File::Temp->new;
 
     # have to set inc_path() after we create our first file
     # so that we know where the temp dir is.
 
-    my $file = $c->model('File')->new_object( file => $tempf );
+    my $file = $c->model('File')->new_object( file => $tempf->filename );
 
-    warn "testing basename on $file";
+    #warn "testing basename on $file";
 
     # test that calling $file->foo actually calls foo()
     # on $file->delegate and not $file itself
@@ -98,8 +96,6 @@ sub autoload : Local {
         warn "$file cannot can(read) - $@ $!";
         return;
     }
-  
-
 
     $c->res->body("autoload is a-ok");
 

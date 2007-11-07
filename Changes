@@ -22,5 +22,7 @@ Revision history for CatalystX-CRUD
         * Model reserved params now start with _
         * some can/AUTOLOAD black magic to make Object/delegate stuff DWIM.
 
+0.06    6 November 2007
+        * clean up temp files from make test [rt# 30425]
 
 

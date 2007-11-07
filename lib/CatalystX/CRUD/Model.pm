@@ -9,7 +9,7 @@ use base qw(
 use Carp;
 use Data::Pageset;
 
-our $VERSION = '0.05';
+our $VERSION = '0.06';
 
 __PACKAGE__->mk_accessors(qw( object_class ));
 

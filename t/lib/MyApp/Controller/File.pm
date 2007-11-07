@@ -3,7 +3,7 @@ use strict;
 use base qw( CatalystX::CRUD::Controller );
 use Carp;
 use Data::Dump qw( dump );
-use File::Temp qw( tempfile );
+use File::Temp;
 
 # test the view_on_single_result method
 # search for a file where we know there is only one
@@ -30,9 +30,9 @@ sub do_search {
 
     $self->config->{view_on_single_result} = 1;
 
-    my ( undef, $tmpf ) = tempfile();
-
-    my $file = $c->model( $self->model_name )->new_object( file => $tmpf );
+    my $tmpf = File::Temp->new;
+    
+    my $file = $c->model( $self->model_name )->new_object( file => $tmpf->filename );
     
     if ( my $uri = $self->view_on_single_result( $c, [$file] ) ) {
         $c->response->redirect($uri);
