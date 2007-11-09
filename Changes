@@ -25,4 +25,8 @@ Revision history for CatalystX-CRUD
 0.06    6 November 2007
         * clean up temp files from make test [rt# 30425]
 
+0.07    9 November 2007
+        * added count() method to base Controller
+
+
 

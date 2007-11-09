@@ -7,7 +7,7 @@ use base qw(
 );
 use Carp;
 
-our $VERSION = '0.06';
+our $VERSION = '0.07';
 
 =head1 NAME
 
@@ -286,6 +286,28 @@ sub search : Local {
     $self->do_search( $c, @arg );
 }
 
+=head2 count
+
+Attribute: Local
+
+Like search() but does not set result values, only a total count.
+Useful for AJAX-y types of situations where you want to query for a total
+number of matches and create a pager but not actually retrieve any data.
+
+=cut
+
+sub count : Local {
+    my ( $self, $c, @arg ) = @_;
+    unless ( $self->can_read($c) ) {
+        $self->throw_error('Permission denied');
+        return;
+    }
+
+    $c->stash->{fetch_no_results} = 1;
+
+    $self->do_search( $c, @arg );
+}
+
 =head1 INTERNAL METHODS
 
 The following methods are not visible via the URI namespace but
@@ -428,8 +450,7 @@ sub do_search {
     $c->stash->{form} ||= $self->form;
 
     # if we have no input, just return for initial search
-    if(!@arg && !$c->req->param && $c->action eq 'search')
-    {
+    if ( !@arg && !$c->req->param && $c->action eq 'search' ) {
         return;
     }
 
@@ -437,9 +458,12 @@ sub do_search {
     $c->stash->{view_on_single_result} = 1
         unless exists $c->stash->{view_on_single_result};
 
-    my $query = $c->model( $self->model_name )->make_query( @arg );
+    my $query = $c->model( $self->model_name )->make_query(@arg);
     my $count = $c->model( $self->model_name )->count($query) || 0;
-    my $results = $c->model( $self->model_name )->search($query);
+    my $results;
+    unless ( $c->stash->{fetch_no_results} ) {
+        $results = $c->model( $self->model_name )->search($query);
+    }
     if (   $count == 1
         && ( my $uri = $self->view_on_single_result( $c, $results ) )
         && $c->stash->{view_on_single_result} )
