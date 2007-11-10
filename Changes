@@ -28,5 +28,9 @@ Revision history for CatalystX-CRUD
 0.07    9 November 2007
         * added count() method to base Controller
 
+0.08    9 November 2007
+        * fix documentation for save() method.
+
+
 
 

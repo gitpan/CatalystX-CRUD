@@ -7,7 +7,7 @@ use base qw(
 );
 use Carp;
 
-our $VERSION = '0.07';
+our $VERSION = '0.08';
 
 =head1 NAME
 
@@ -181,9 +181,8 @@ sub view : PathPart Chained('fetch') Args(0) {
 
 Attribute: chained to fetch(), expecting no arguments.
 
-Initializes the C<form> with values from existing C<object> (if any),
-validates the C<form> using param_hash(), and then if form is valid,
-initializes the C<object> with the values from the C<form>.
+Creates an object with form_to_object(), then follows the precommit(),
+save_obj() and postcommit() logic.
 
 See the save_obj(), precommit() and postcommit() hook methods for
 ways to affect the behaviour of save().
