@@ -31,6 +31,10 @@ Revision history for CatalystX-CRUD
 0.08    9 November 2007
         * fix documentation for save() method.
 
+0.09    10 November 2007
+        * fix missing precommit() default sub in Controller.pm
+        * fix AUTOLOAD hackery in Model.pm
+
 
 
 

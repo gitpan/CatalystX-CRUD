@@ -9,7 +9,7 @@ use base qw(
 use Carp;
 use Data::Pageset;
 
-our $VERSION = '0.08';
+our $VERSION = '0.09';
 
 __PACKAGE__->mk_accessors(qw( object_class ));
 
@@ -117,7 +117,7 @@ sub Xsetup {
             *{ $class . '::AUTOLOAD' } = sub {
                 my $obj       = shift;
                 my $obj_class = ref($self) || $self;
-                my $method    = shift || our $AUTOLOAD;
+                my $method    = our $AUTOLOAD;
                 $method =~ s/.*://;
                 return if $method eq 'DESTROY';
                 if ( $obj->delegate->can($method) ) {
@@ -134,8 +134,9 @@ sub Xsetup {
             # we have to UNIVERSAL::can because we are overriding can()
             # in $class and would otherwise have a recursive nightmare.
             *{ $class . '::can' } = sub {
-                my ( $obj_class, $method ) = @_;
-                return UNIVERSAL::can($class, $method) || $obj_class->AUTOLOAD($method);
+                my ( $obj_class, $method, @arg ) = @_;
+                our $AUTOLOAD = $method;
+                return UNIVERSAL::can($class, $method) || $obj_class->AUTOLOAD(@arg);
             };
 
         }

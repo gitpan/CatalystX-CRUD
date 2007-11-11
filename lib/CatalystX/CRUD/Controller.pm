@@ -7,7 +7,7 @@ use base qw(
 );
 use Carp;
 
-our $VERSION = '0.08';
+our $VERSION = '0.09';
 
 =head1 NAME
 
@@ -389,6 +389,8 @@ If precommit() returns a true value, save_obj() gets called.
 The default return is true.
 
 =cut
+
+sub precommit {1}
 
 =head2 postcommit( I<context>, I<object> )
 
