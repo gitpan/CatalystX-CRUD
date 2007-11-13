@@ -4,9 +4,7 @@ use warnings;
 use Carp;
 use base qw( CatalystX::CRUD );
 
-#use UNIVERSAL qw( isa can );   # do we need this??
-
-our $VERSION = '0.09';
+our $VERSION = '0.10';
 
 =head1 NAME
 
@@ -28,8 +26,7 @@ CatalystX::CRUD::Iterator - generic iterator wrapper for CXCM iterator() results
      
      return CatalystX::CRUD::Iterator->new(
                                         $iterator,
-                                        $self->object_class,
-                                        'delegate'
+                                        $self->object_class
                                         );
  }
 
@@ -44,13 +41,11 @@ for a similar level of abstraction across all kinds of CXCM classes.
 
 =head1 METHODS
 
-=head2 new( I<iterator>, I<class_name> [, I<method_name>] )
+=head2 new( I<iterator>, I<class_name> )
 
 Returns a CatalystX::CRUD::Iterator instance.
 
 I<iterator> must have a next() method and (optionally) a finish() method.
-
-I<method_name> defaults to C<delegate>.
 
 See next().
 
@@ -64,7 +59,6 @@ sub new {
     my $iterator   = shift or $class->throw_error("need an iterator object");
     my $cxco_class = shift
         or $class->throw_error("need the name of a CXCO class");
-    my $cxco_method = shift || 'delegate';
 
     # sanity checks
     unless ( $iterator->can('next') ) {
@@ -82,8 +76,7 @@ sub new {
 
     return bless(
         {   iterator => $iterator,
-            cxco     => $cxco_class,
-            method   => $cxco_method
+            cxco     => $cxco_class
         },
         $class
     );
@@ -102,9 +95,8 @@ sub next {
     my $next = $self->{iterator}->next;
     return unless defined($next);
 
-    my $obj    = $self->{cxco}->new;
-    my $method = $self->{method};
-    $obj->$method($next);
+    my $obj = $self->{cxco}->new;
+    $obj->{delegate} = $next;
     return $obj;
 }
 

@@ -36,5 +36,6 @@ Revision history for CatalystX-CRUD
         * fix AUTOLOAD hackery in Model.pm
 
 
-
+0.10    12 Nov 2007
+        * simplify Iterator base class to hardcode 'delegate' method name
 

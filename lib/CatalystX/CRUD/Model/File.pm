@@ -7,7 +7,7 @@ use Carp;
 use Data::Dump qw( dump );
 use Path::Class::File;
 
-our $VERSION = '0.09';
+our $VERSION = '0.10';
 
 =head1 NAME
 
