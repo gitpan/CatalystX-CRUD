@@ -9,7 +9,7 @@ use base qw(
 use Carp;
 use Data::Pageset;
 
-our $VERSION = '0.10';
+our $VERSION = '0.11';
 
 __PACKAGE__->mk_accessors(qw( object_class ));
 
@@ -116,7 +116,7 @@ sub Xsetup {
             no warnings 'redefine';
             *{ $class . '::AUTOLOAD' } = sub {
                 my $obj       = shift;
-                my $obj_class = ref($self) || $self;
+                my $obj_class = ref($obj) || $obj;
                 my $method    = our $AUTOLOAD;
                 $method =~ s/.*://;
                 return if $method eq 'DESTROY';

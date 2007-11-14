@@ -39,3 +39,6 @@ Revision history for CatalystX-CRUD
 0.10    12 Nov 2007
         * simplify Iterator base class to hardcode 'delegate' method name
 
+0.11    14 Nov 2007
+        * fix AUTOLOAD method to report correct object class on error
+
