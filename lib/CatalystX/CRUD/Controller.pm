@@ -7,7 +7,7 @@ use base qw(
 );
 use Carp;
 
-our $VERSION = '0.11';
+our $VERSION = '0.12';
 
 =head1 NAME
 
@@ -451,7 +451,7 @@ sub do_search {
     $c->stash->{form} ||= $self->form;
 
     # if we have no input, just return for initial search
-    if ( !@arg && !$c->req->param && $c->action eq 'search' ) {
+    if ( !@arg && !$c->req->param && $c->action->name eq 'search' ) {
         return;
     }
 

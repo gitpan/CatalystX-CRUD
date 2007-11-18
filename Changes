@@ -42,3 +42,7 @@ Revision history for CatalystX-CRUD
 0.11    14 Nov 2007
         * fix AUTOLOAD method to report correct object class on error
 
+0.12    17 Nov 2007
+        * fix bug in Controller when determining whether do_search() should search.
+
+
