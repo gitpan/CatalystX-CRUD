@@ -4,7 +4,7 @@ use warnings;
 use Carp;
 use base qw( CatalystX::CRUD );
 
-our $VERSION = '0.12';
+our $VERSION = '0.14';
 
 =head1 NAME
 

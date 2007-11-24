@@ -45,4 +45,10 @@ Revision history for CatalystX-CRUD
 0.12    17 Nov 2007
         * fix bug in Controller when determining whether do_search() should search.
 
+0.13    19 Nov 2007
+        * fix bug in Controller when there is only one result in do_search().
+
+0.14    23 Nov 2007
+        * add Tutorial
+        * fix bug (again) in Controller when there is only one result in do_search().
 

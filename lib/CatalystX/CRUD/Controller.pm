@@ -7,7 +7,7 @@ use base qw(
 );
 use Carp;
 
-our $VERSION = '0.12';
+our $VERSION = '0.14';
 
 =head1 NAME
 
@@ -465,9 +465,10 @@ sub do_search {
     unless ( $c->stash->{fetch_no_results} ) {
         $results = $c->model( $self->model_name )->search($query);
     }
-    if (   $count == 1
-        && ( my $uri = $self->view_on_single_result( $c, $results ) )
-        && $c->stash->{view_on_single_result} )
+    if (    $results
+        and $count == 1
+        and $c->stash->{view_on_single_result}
+        and ( my $uri = $self->view_on_single_result( $c, $results ) ) )
     {
         $c->response->redirect($uri);
     }
