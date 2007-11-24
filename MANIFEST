@@ -10,6 +10,7 @@ lib/CatalystX/CRUD/Iterator.pm
 lib/CatalystX/CRUD/Object/File.pm
 lib/CatalystX/CRUD/Model/File.pm
 lib/CatalystX/CRUD/Iterator/File.pm
+lib/CatalystX/CRUD/Tutorial.pod
 t/00-load.t
 t/boilerplate.t
 t/pod-coverage.t

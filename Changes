@@ -52,3 +52,6 @@ Revision history for CatalystX-CRUD
         * add Tutorial
         * fix bug (again) in Controller when there is only one result in do_search().
 
+0.15    24 Nov 2007
+        * oops. actually include the tutorial pod in this release.
+
