@@ -55,3 +55,7 @@ Revision history for CatalystX-CRUD
 0.15    24 Nov 2007
         * oops. actually include the tutorial pod in this release.
 
+0.16    04 Dec 2007
+        * fix typo in Tutorial so it shows up in search.cpan.org
+
+

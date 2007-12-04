@@ -2,7 +2,7 @@
 
 =head1 NAME
 
-CatalystX::CRUD Tutorial - step-by-step through CatalystX::CRUD example app
+CatalystX::CRUD::Tutorial - step-by-step through CatalystX::CRUD example app
 
 =head1 OVERVIEW
 
