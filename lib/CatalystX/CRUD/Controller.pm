@@ -7,7 +7,7 @@ use base qw(
 );
 use Carp;
 
-our $VERSION = '0.16';
+our $VERSION = '0.17';
 
 =head1 NAME
 
@@ -332,6 +332,19 @@ sub form {
     return $self->{_form};
 }
 
+=head2 field_names
+
+Returns an array ref of the field names in form(). By default just calls the field_names()
+method on the form(). Your subclass should implement this method if your form class does
+not have a field_names() method.
+
+=cut
+
+sub field_names {
+    my ($self) = @_;
+    return $self->form->field_names;
+}
+
 =head2 can_read( I<context> )
 
 Returns true if the current request is authorized to read() the C<object> in
@@ -472,14 +485,12 @@ sub do_search {
     {
         $c->response->redirect($uri);
     }
-    elsif ( $count == 0 ) {
-        $c->stash->{results} = { count => $count, results => $results };
-    }
     else {
         $c->stash->{results} = {
             count => $count,
-            pager => $c->model( $self->model_name )
-                ->make_pager( $count, $results ),
+            pager => $count
+            ? $c->model( $self->model_name )->make_pager( $count, $results )
+            : undef,
             results => $results,
             query   => $query,
         };

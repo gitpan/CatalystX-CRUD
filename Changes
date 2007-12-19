@@ -57,5 +57,11 @@ Revision history for CatalystX-CRUD
 
 0.16    04 Dec 2007
         * fix typo in Tutorial so it shows up in search.cpan.org
+        * fix Controller->do_search() to always include query for view's use,
+        even when there are no results.
+
+0.17    19 Dec 2007
+        * add field_names() method to base Controller class. This is to aid development
+        of CatalystX::CRUD::View implementations.
 
 
