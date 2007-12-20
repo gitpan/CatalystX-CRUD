@@ -7,7 +7,7 @@ use base qw(
 );
 use Carp;
 
-our $VERSION = '0.17';
+our $VERSION = '0.18';
 
 =head1 NAME
 
@@ -489,7 +489,8 @@ sub do_search {
         $c->stash->{results} = {
             count => $count,
             pager => $count
-            ? $c->model( $self->model_name )->make_pager( $count, $results )
+            ? ( $c->model( $self->model_name )->make_pager( $count, $results )
+                    || undef )
             : undef,
             results => $results,
             query   => $query,

@@ -64,4 +64,10 @@ Revision history for CatalystX-CRUD
         * add field_names() method to base Controller class. This is to aid development
         of CatalystX::CRUD::View implementations.
 
+0.18    20 Dec 2007
+        * added _no_page parameter support to the Model API.
+        * added ::Model::Utils to help with DRY
+
+
+
 

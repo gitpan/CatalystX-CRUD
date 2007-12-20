@@ -7,7 +7,7 @@ use Carp;
 use Data::Dump qw( dump );
 use Path::Class::File;
 
-our $VERSION = '0.17';
+our $VERSION = '0.18';
 
 =head1 NAME
 
@@ -42,7 +42,7 @@ to the C<root> config value.
 sub Xsetup {
     my ( $self, $c ) = @_;
     $self->config->{inc_path} ||= [ $c->config->{root} ];
-    $self->SUPER::Xsetup($c);
+    $self->NEXT::Xsetup($c);
 }
 
 =head2 new_object( file => I<path/to/file> )

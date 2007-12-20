@@ -9,7 +9,7 @@ use base qw(
 use Carp;
 use Data::Pageset;
 
-our $VERSION = '0.17';
+our $VERSION = '0.18';
 
 __PACKAGE__->mk_accessors(qw( object_class ));
 
@@ -82,9 +82,9 @@ Overrides the Catalyst::Model new() method to call Xsetup().
 =cut
 
 sub new {
-    my ( $class, $c, $arg ) = @_;
-    my $self = $class->NEXT::new( $c, $arg );
-    $self->Xsetup( $c, $arg );
+    my ( $class, $c, @arg ) = @_;
+    my $self = $class->NEXT::new( $c, @arg );
+    $self->Xsetup( $c, @arg );
     return $self;
 }
 
@@ -136,13 +136,14 @@ sub Xsetup {
             *{ $class . '::can' } = sub {
                 my ( $obj_class, $method, @arg ) = @_;
                 our $AUTOLOAD = $method;
-                return UNIVERSAL::can($class, $method) || $obj_class->AUTOLOAD(@arg);
+                return UNIVERSAL::can( $class, $method )
+                    || $obj_class->AUTOLOAD(@arg);
             };
 
         }
 
     }
-    if ( !exists $self->config->{page_size} ) {
+    if ( !defined $self->config->{page_size} ) {
         $self->config->{page_size} = 50;
     }
     return $self;
@@ -162,11 +163,16 @@ Returns a Data::Pageset object using I<total>,
 either the C<_page_size> param or the value of page_size(),
 and the C<_page> param or C<1>.
 
+If the C<_no_page> request param is true, will return undef.
+B<NOTE:> Model authors should check (and respect) the C<_no_page>
+param when constructing queries.
+
 =cut
 
 sub make_pager {
     my ( $self, $count, $results ) = @_;
     my $c = $self->context;
+    return if $c->req->param('_no_page');
     return Data::Pageset->new(
         {   total_entries    => $count,
             entries_per_page => $c->req->param('_page_size')
@@ -248,12 +254,10 @@ Should return appropriate values for passing to search(), iterator() and
 count(). Example of use:
 
  # in a CXCM subclass called MyApp::Model::Foo
- sub search
- {
+ sub search {
      my $self = shift;
      my @arg  = @_;
-     unless(@arg)
-     {
+     unless(@arg) {
          @arg = $self->make_query;
      }
      # search code here
@@ -261,8 +265,7 @@ count(). Example of use:
      return $results;
  }
  
- sub make_query
- {
+ sub make_query {
      my $self = shift;
      my $c    = $self->context;
      
