@@ -1,6 +1,6 @@
 --- #YAML:1.0
 name:                CatalystX-CRUD
-version:             0.18
+version:             0.19
 abstract:            CRUD framework for Catalyst applications
 license:             ~
 generated_by:        ExtUtils::MakeMaker version 6.36
@@ -14,6 +14,7 @@ requires:
     Data::Pageset:                 0
     NEXT:                          0
     Path::Class::File:             0
+    Sort::SQL:                     0.03
     Test::More:                    0
 meta-spec:
     url:     http://module-build.sourceforge.net/META-spec-v1.2.html

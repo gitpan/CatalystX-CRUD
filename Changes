@@ -68,6 +68,8 @@ Revision history for CatalystX-CRUD
         * added _no_page parameter support to the Model API.
         * added ::Model::Utils to help with DRY
 
+0.19    21 Dec 2007
+        * added Sort::SQL to Makefile.PL reqs.
 
 
 
