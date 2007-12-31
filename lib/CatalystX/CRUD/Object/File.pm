@@ -12,7 +12,7 @@ use overload(
 
 __PACKAGE__->mk_accessors(qw( buffer ));
 
-our $VERSION = '0.19';
+our $VERSION = '0.20';
 
 =head1 NAME
 

@@ -71,5 +71,6 @@ Revision history for CatalystX-CRUD
 0.19    21 Dec 2007
         * added Sort::SQL to Makefile.PL reqs.
 
-
+0.20    31 Dec 2007
+        * fix view_on_single_result() to check can_write()
 

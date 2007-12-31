@@ -7,7 +7,7 @@ use base qw(
 );
 use Carp;
 
-our $VERSION = '0.19';
+our $VERSION = '0.20';
 
 =head1 NAME
 
@@ -446,7 +446,8 @@ sub view_on_single_result {
     # the append . '' is to force stringify anything
     # that might be an object with overloading. Otherwise
     # uri_for() assumes it is an Action object.
-    return $c->uri_for( $obj->$pk . '', 'edit' );
+    return $c->uri_for( $obj->$pk . '',
+        $self->can_write($c) ? 'edit' : 'view' );
 }
 
 =head2 do_search( I<context>, I<arg> )
