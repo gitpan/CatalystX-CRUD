@@ -6,7 +6,7 @@ use Carp;
 
 __PACKAGE__->mk_ro_accessors(qw( delegate ));
 
-our $VERSION = '0.20';
+our $VERSION = '0.21';
 
 =head1 NAME
 

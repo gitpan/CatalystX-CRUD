@@ -9,7 +9,7 @@ use base qw(
 use Carp;
 use Data::Pageset;
 
-our $VERSION = '0.20';
+our $VERSION = '0.21';
 
 __PACKAGE__->mk_accessors(qw( object_class ));
 
@@ -102,19 +102,19 @@ has already been merged by the time Xsetup() is called.
 sub Xsetup {
     my ( $self, $c, $arg ) = @_;
     if ( exists $self->config->{object_class} ) {
-        my $class = $self->config->{object_class};
-        eval "require $class";
+        my $object_class = $self->config->{object_class};
+        eval "require $object_class";
         if ($@) {
-            $self->throw_error("$class could not be loaded: $@");
+            $self->throw_error("$object_class could not be loaded: $@");
         }
-        $self->object_class($class);
+        $self->object_class($object_class);
 
         # some black magic hackery to make Object classes act like
         # they're overloaded delegate()s
         {
             no strict 'refs';
             no warnings 'redefine';
-            *{ $class . '::AUTOLOAD' } = sub {
+            *{ $object_class . '::AUTOLOAD' } = sub {
                 my $obj       = shift;
                 my $obj_class = ref($obj) || $obj;
                 my $method    = our $AUTOLOAD;
@@ -129,15 +129,24 @@ sub Xsetup {
 
             };
 
-            # this overrides the basic $class->can
+            # this overrides the basic $object_class->can
             # to always call secondary can() on its delegate.
             # we have to UNIVERSAL::can because we are overriding can()
             # in $class and would otherwise have a recursive nightmare.
-            *{ $class . '::can' } = sub {
-                my ( $obj_class, $method, @arg ) = @_;
-                our $AUTOLOAD = $method;
-                return UNIVERSAL::can( $class, $method )
-                    || $obj_class->AUTOLOAD(@arg);
+            *{ $object_class . '::can' } = sub {
+                my ( $obj, $method, @arg ) = @_;
+                if ( ref($obj) ) {
+
+                    # object method tries object_class first,
+                    # then the delegate().
+                    return UNIVERSAL::can( $object_class, $method )
+                        || $obj->delegate->can( $method, @arg );
+                }
+                else {
+
+                    # class method
+                    return UNIVERSAL::can( $object_class, $method );
+                }
             };
 
         }

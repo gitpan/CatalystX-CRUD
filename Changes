@@ -74,3 +74,6 @@ Revision history for CatalystX-CRUD
 0.20    31 Dec 2007
         * fix view_on_single_result() to check can_write()
 
+0.21    04 Jan 2008
+        * fix black magic can() in Model.pm
+
