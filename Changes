@@ -77,3 +77,6 @@ Revision history for CatalystX-CRUD
 0.21    04 Jan 2008
         * fix black magic can() in Model.pm
 
+0.22    04 Jan 2008
+        * add treat_like_int() support to Model::Utils
+

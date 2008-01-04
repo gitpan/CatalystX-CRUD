@@ -5,7 +5,7 @@ use base qw( CatalystX::CRUD Class::Accessor::Fast );
 use Sort::SQL;
 __PACKAGE__->mk_accessors(qw( use_ilike ne_sign ));
 
-our $VERSION = '0.21';
+our $VERSION = '0.22';
 
 =head1 NAME
 
@@ -38,6 +38,12 @@ to use ILIKE instead of LIKE SQL command.
 
 What string to use for 'not equal' in params_to_sql_query().
 Defaults to '!='.
+
+=head2 treat_like_int
+
+Should return a hashref of column names to treat as integers
+instead of text strings when parsing wildcard request params. Example
+might be all date/timestamp columns.
 
 =cut
 
@@ -183,6 +189,8 @@ sub params_to_sql_query {
     my ( @sql, %query );
     my $ne = $self->ne_sign || '!=';
     my $like = $self->use_ilike ? 'ilike' : 'like';
+    my $treat_like_int
+        = $self->can('treat_like_int') ? $self->treat_like_int : {};
 
     for my $p (@$field_names) {
 
@@ -198,7 +206,13 @@ sub params_to_sql_query {
             grep {s/\*/\%/g} @safe;
             my @wild = grep {m/\%/} @safe;
             if (@wild) {
-                push( @sql, ( $p => { $like => \@wild } ) );
+                if ( exists $treat_like_int->{$p} ) {
+                    push( @sql,
+                        ( $p => { 'ge' => [ map {m/^(.+?)\%/} @wild ] } ) );
+                }
+                else {
+                    push( @sql, ( $p => { $like => \@wild } ) );
+                }
             }
 
             # allow for negation of query
