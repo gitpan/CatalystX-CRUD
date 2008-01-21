@@ -80,3 +80,7 @@ Revision history for CatalystX-CRUD
 0.22    04 Jan 2008
         * add treat_like_int() support to Model::Utils
 
+0.23    20 Jan 2008
+        * added REST API
+        * added allow_GET_writes Controller config option, to prevent casual GET /save or /delete requests.
+

@@ -6,6 +6,7 @@ lib/CatalystX/CRUD.pm
 lib/CatalystX/CRUD/Model.pm
 lib/CatalystX/CRUD/Model/Utils.pm
 lib/CatalystX/CRUD/Controller.pm
+lib/CatalystX/CRUD/REST.pm
 lib/CatalystX/CRUD/Object.pm
 lib/CatalystX/CRUD/Iterator.pm
 lib/CatalystX/CRUD/Object/File.pm

@@ -7,7 +7,7 @@ use base qw(
 );
 use Carp;
 
-our $VERSION = '0.22';
+our $VERSION = '0.23';
 
 =head1 NAME
 
@@ -29,6 +29,7 @@ CatalystX::CRUD::Controller - base class for CRUD controllers
                     primary_key             => 'id',
                     view_on_single_result   => 0,
                     page_size               => 50,
+                    allow_GET_writes        => 0,
                     );
                     
     1;
@@ -195,6 +196,13 @@ behaviour. If found, save() will detach() to rm().
 sub save : PathPart Chained('fetch') Args(0) {
     my ( $self, $c ) = @_;
 
+    if ( !$self->allow_GET_writes ) {
+        if ( $c->req->method ne 'POST' ) {
+            $self->throw_error('GET request not allowed');
+            return;
+        }
+    }
+
     if ( $c->request->param('_delete') ) {
         $c->action->name('rm');    # so we can test against it in postcommit()
         $c->detach('rm');
@@ -232,6 +240,12 @@ Calls the delete() method on the C<object>.
 
 sub rm : PathPart Chained('fetch') Args(0) {
     my ( $self, $c ) = @_;
+    if ( !$self->allow_GET_writes ) {
+        if ( $c->req->method ne 'POST' ) {
+            $self->throw_error('GET request not allowed');
+            return;
+        }
+    }
     return if $self->has_errors($c);
     unless ( $self->can_write($c) ) {
         $self->throw_error('Permission denied');
@@ -519,6 +533,8 @@ The following methods simply return the config() value of the same name.
 
 =item page_size
 
+=item allow_GET_writes
+
 =back
 
 =cut
@@ -529,6 +545,7 @@ sub init_object      { shift->config->{init_object} }
 sub model_name       { shift->config->{model_name} }
 sub default_template { shift->config->{default_template} }
 sub primary_key      { shift->config->{primary_key} }
+sub allow_GET_writes { shift->config->{allow_GET_writes} }
 
 # see http://use.perl.org/~LTjake/journal/31738
 # PathPrefix will likely end up in an official Catalyst RSN.
