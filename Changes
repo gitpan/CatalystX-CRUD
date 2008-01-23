@@ -84,3 +84,9 @@ Revision history for CatalystX-CRUD
         * added REST API
         * added allow_GET_writes Controller config option, to prevent casual GET /save or /delete requests.
 
+0.24    22 Jan 2008
+        * always fetch() in REST->default, to fix bug with no object being set for create()
+        * always uc() the req method for comparison purposes
+        * fix bug when checking the _http_method param to use params() instead of param() and use the first if multiple.
+        * refactor REST to provide backwards compat with Controller for easy @ISA swap (as advertised)
+

@@ -5,7 +5,7 @@ use base qw( CatalystX::CRUD::Controller );
 
 use Carp;
 
-our $VERSION = '0.23';
+our $VERSION = '0.24';
 
 =head1 NAME
 
@@ -70,9 +70,15 @@ Acts just like create() in base Controller class, but with a RESTful name.
 
 =cut
 
-# alias to the RPC-style methods in base class
-*edit_form   = \&edit;
-*create_form = \&create;
+sub create_form : Local {
+    my ( $self, $c ) = @_;
+    return $self->create($c);
+}
+
+sub edit_form : PathPart Chained('fetch') Args(0) {
+    my ( $self, $c ) = @_;
+    return $self->edit($c);
+}
 
 =head2 default
 
@@ -82,28 +88,41 @@ Calls the appropriate method based on the HTTP method name.
 
 =cut
 
+my %http_method_map = (
+    'POST'   => 'save',
+    'PUT'    => 'save',
+    'DELETE' => 'rm',
+    'GET'    => 'view'
+);
+
 sub default : Private {
-    my ( $self, $c, $oid ) = @_;
+    my ( $self, $c ) = @_;
+
+    my @ns   = split( m/\//, $c->action->namespace );
+    my $args = $c->req->arguments;
+    my $i    = 0;
+    for (@ns) {
+        if ( $_ = $args->[ $i++ ] ) {
+            $c->log->debug("shift $_") if $c->debug;
+        }
+        else {
+            $c->log->debug("NO shift $_") if $c->debug;
+        }
+    }
+    my $oid = $args->[ $i++ ];
+    my $rpc = $args->[ $i++ ];    # RPC compat
+    $c->log->debug("default OID: $oid") if $c->debug;
 
     my $method = $self->req_method($c);
     if ( !defined $oid && $method eq 'GET' ) {
-        return $self->list;
+        return $self->list($c);
     }
 
     # everything else requires fetch()
-    $self->fetch( $c, $oid ) if defined $oid;
-    if ( $method eq 'POST' ) {
-        return $self->save;
-    }
-    elsif ( $method eq 'PUT' ) {
-        return $self->save;
-    }
-    elsif ( $method eq 'DELETE' ) {
-        return $self->rm;
-    }
-    elsif ( $method eq 'GET' ) {
-        return $self->view;
-    }
+    $self->fetch( $c, $oid );
+    my $to_call = $rpc || $http_method_map{$method};
+    $c->log->debug("$method -> $to_call") if $c->debug;
+    return $self->can($to_call) ? $self->$to_call($c) : $self->view($c);
 }
 
 =head2 req_method( I<context> )
@@ -111,20 +130,24 @@ sub default : Private {
 Internal method. Returns the HTTP method name, allowing
 POST to serve as a tunnel when the C<_http_method> param
 is present. Since most browsers do not support PUT or DELETE
-HTTP methods, you can use the C<_http_method> param to indicate
+HTTP methods, you can use the C<_http_method> param to tunnel
 the desired HTTP method and then POST instead.
 
 =cut
 
 sub req_method {
     my ( $self, $c ) = @_;
-    if ( $c->req->method eq 'POST' ) {
-        return $c->req->param('_http_method')
-            ? $c->req->param('_http_method')
+    if ( uc( $c->req->method ) eq 'POST' ) {
+        return exists $c->req->params->{'_http_method'}
+            ? uc(
+            ref $c->req->params->{'_http_method'}
+            ? $c->req->params->{'_http_method'}->[0]
+            : $c->req->params->{'_http_method'}
+            )
             : 'POST';
 
     }
-    return $c->req->method;
+    return uc( $c->req->method );
 }
 
 =head2 edit( I<context> )
@@ -170,25 +193,6 @@ sub rm {
     my ( $self, $c ) = @_;
     return $self->NEXT::rm($c);
 }
-
-=head2 fetch( I<context>, I<pk> )
-
-Overrides base method to disable chaining.
-
-=cut
-
-sub fetch {
-    my ( $self, $c, $oid ) = @_;
-    return $self->NEXT::fetch( $c, $oid );
-}
-
-=head2 create
-
-=head2 edit
-
-edit() and create() are aliased to edit_form() and create_form().
-
-=cut
 
 1;
 
