@@ -7,7 +7,7 @@ use base qw(
 );
 use Carp;
 
-our $VERSION = '0.24';
+our $VERSION = '0.25';
 
 =head1 NAME
 
@@ -188,8 +188,10 @@ save_obj() and postcommit() logic.
 See the save_obj(), precommit() and postcommit() hook methods for
 ways to affect the behaviour of save().
 
-The special param() value C<_delete> is checked to support REST-like
-behaviour. If found, save() will detach() to rm().
+The special param() value C<_delete> is checked to support POST requests
+to /save. If found, save() will detach() to rm().
+
+save() returns 0 on any error, and returns 1 on success.
 
 =cut
 
@@ -205,7 +207,8 @@ sub save : PathPart Chained('fetch') Args(0) {
 
     if ( $c->request->param('_delete') ) {
         $c->action->name('rm');    # so we can test against it in postcommit()
-        $c->detach('rm');
+        $self->rm($c);
+        return;
     }
 
     return if $self->has_errors($c);
@@ -216,6 +219,9 @@ sub save : PathPart Chained('fetch') Args(0) {
 
     # get a valid object
     my $obj = $self->form_to_object($c);
+    if ( !$obj ) {
+        return 0;
+    }
 
     # write our changes
     unless ( $self->precommit( $c, $obj ) ) {
@@ -384,6 +390,10 @@ sub can_write {1}
 Should return an object ready to be handed to save_obj(). This is the primary
 method to override in your subclass, since it will handle all the form validation
 and population of the object.
+
+If form_to_object() returns 0, save() will abort at that point in the process,
+so form_to_object() should set whatever template and other stash() values
+should be used in the response.
 
 Will throw_error() if not overridden.
 

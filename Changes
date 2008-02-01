@@ -90,3 +90,6 @@ Revision history for CatalystX-CRUD
         * fix bug when checking the _http_method param to use params() instead of param() and use the first if multiple.
         * refactor REST to provide backwards compat with Controller for easy @ISA swap (as advertised)
 
+0.25    1 Feb 2008
+        * fix bug to clarify what happens when form_to_object() returns false.
+
