@@ -1,6 +1,6 @@
 --- #YAML:1.0
 name:                CatalystX-CRUD
-version:             0.25
+version:             0.26
 abstract:            CRUD framework for Catalyst applications
 license:             ~
 author:              
@@ -12,9 +12,9 @@ requires:
     Catalyst::Exception:           0
     Catalyst::Runtime:             0
     Class::Accessor::Fast:         0
+    Class::C3:                     0
     Data::Dump:                    0
     Data::Pageset:                 0
-    NEXT:                          0
     Path::Class::File:             0
     Sort::SQL:                     0.03
     Test::More:                    0

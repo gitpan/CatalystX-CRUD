@@ -7,9 +7,9 @@ use base qw(
     Catalyst::Model
 );
 use Carp;
-use Data::Pageset;
+use Class::C3;
 
-our $VERSION = '0.25';
+our $VERSION = '0.26';
 
 __PACKAGE__->mk_accessors(qw( object_class ));
 
@@ -83,7 +83,7 @@ Overrides the Catalyst::Model new() method to call Xsetup().
 
 sub new {
     my ( $class, $c, @arg ) = @_;
-    my $self = $class->NEXT::new( $c, @arg );
+    my $self = $class->next::method( $c, @arg );
     $self->Xsetup( $c, @arg );
     return $self;
 }
@@ -109,48 +109,6 @@ sub Xsetup {
         }
         $self->object_class($object_class);
 
-        # some black magic hackery to make Object classes act like
-        # they're overloaded delegate()s
-        {
-            no strict 'refs';
-            no warnings 'redefine';
-            *{ $object_class . '::AUTOLOAD' } = sub {
-                my $obj       = shift;
-                my $obj_class = ref($obj) || $obj;
-                my $method    = our $AUTOLOAD;
-                $method =~ s/.*://;
-                return if $method eq 'DESTROY';
-                if ( $obj->delegate->can($method) ) {
-                    return $obj->delegate->$method(@_);
-                }
-
-                $obj->throw_error(
-                    "method '$method' not implemented in class '$obj_class'");
-
-            };
-
-            # this overrides the basic $object_class->can
-            # to always call secondary can() on its delegate.
-            # we have to UNIVERSAL::can because we are overriding can()
-            # in $class and would otherwise have a recursive nightmare.
-            *{ $object_class . '::can' } = sub {
-                my ( $obj, $method, @arg ) = @_;
-                if ( ref($obj) ) {
-
-                    # object method tries object_class first,
-                    # then the delegate().
-                    return UNIVERSAL::can( $object_class, $method )
-                        || $obj->delegate->can( $method, @arg );
-                }
-                else {
-
-                    # class method
-                    return UNIVERSAL::can( $object_class, $method );
-                }
-            };
-
-        }
-
     }
     if ( !defined $self->config->{page_size} ) {
         $self->config->{page_size} = 50;
@@ -165,34 +123,6 @@ Returns the C<page_size> set in config().
 =cut
 
 sub page_size { shift->config->{page_size} }
-
-=head2 make_pager( I<total>, I<results> )
-
-Returns a Data::Pageset object using I<total>,
-either the C<_page_size> param or the value of page_size(),
-and the C<_page> param or C<1>.
-
-If the C<_no_page> request param is true, will return undef.
-B<NOTE:> Model authors should check (and respect) the C<_no_page>
-param when constructing queries.
-
-=cut
-
-sub make_pager {
-    my ( $self, $count, $results ) = @_;
-    my $c = $self->context;
-    return if $c->req->param('_no_page');
-    return Data::Pageset->new(
-        {   total_entries    => $count,
-            entries_per_page => $c->req->param('_page_size')
-                || $self->page_size,
-            current_page => $c->req->param('_page')
-                || 1,
-            pages_per_set => 10,        #TODO make this configurable?
-            mode          => 'slide',
-        }
-    );
-}
 
 =head2 new_object
 
@@ -294,6 +224,8 @@ count(). Example of use:
 =back
 
 =cut
+
+sub make_query { shift->throw_error("must implement make_query()") }
 
 1;
 

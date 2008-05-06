@@ -22,4 +22,10 @@ t/lib/MyApp.pm
 t/lib/MyApp/File.pm
 t/lib/MyApp/Model/File.pm
 t/lib/MyApp/Controller/File.pm
+lib/CatalystX/CRUD/ModelAdapter.pm
+lib/CatalystX/CRUD/ModelAdapter/File.pm
+lib/CatalystX/CRUD/Test/Controller.pm
+lib/CatalystX/CRUD/Test/Form.pm
+t/lib/MyApp/Controller/FileAdapter.pm
+t/lib/MyApp/Form.pm
 META.yml                                 Module meta-data (added by MakeMaker)

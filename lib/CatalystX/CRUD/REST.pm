@@ -2,10 +2,10 @@ package CatalystX::CRUD::REST;
 use strict;
 use warnings;
 use base qw( CatalystX::CRUD::Controller );
-
 use Carp;
+use Class::C3;
 
-our $VERSION = '0.25';
+our $VERSION = '0.26';
 
 =head1 NAME
 
@@ -72,12 +72,24 @@ Acts just like create() in base Controller class, but with a RESTful name.
 
 sub create_form : Local {
     my ( $self, $c ) = @_;
-    return $self->create($c);
+    $self->fetch( $c, 0 );
+    $self->edit($c);
 }
 
 sub edit_form : PathPart Chained('fetch') Args(0) {
     my ( $self, $c ) = @_;
     return $self->edit($c);
+}
+
+=head2 create
+
+Redirects to create_form().
+
+=cut
+
+sub create : Local {
+    my ( $self, $c ) = @_;
+    $c->res->redirect( $c->uri_for('create_form') );
 }
 
 =head2 default
@@ -95,57 +107,60 @@ my %http_method_map = (
     'GET'    => 'view'
 );
 
-sub default : Private {
-    my ( $self, $c ) = @_;
+sub default : Path {
+    my ( $self, $c, @arg ) = @_;
 
-    my @ns   = split( m/\//, $c->action->namespace );
-    my $args = $c->req->arguments;
-    my $i    = 0;
-    for (@ns) {
-        if ( $_ = $args->[ $i++ ] ) {
-            $c->log->debug("shift $_") if $c->debug;
-        }
-        else {
-            $c->log->debug("NO shift $_") if $c->debug;
-        }
-    }
-    my $oid = $args->[ $i++ ];
-    my $rpc = $args->[ $i++ ];    # RPC compat
+    my $oid = shift @arg;
+    my $rpc = shift @arg;    # RPC compat
     $c->log->debug("default OID: $oid") if $c->debug;
 
     my $method = $self->req_method($c);
     if ( !defined $oid && $method eq 'GET' ) {
+        $c->action->name('list');
+        $c->action->reverse( join( '/', $c->action->namespace, 'list' ) );
         return $self->list($c);
     }
 
     # everything else requires fetch()
     $self->fetch( $c, $oid );
-    my $to_call = $rpc || $http_method_map{$method};
+
+    # what RPC-style method to call
+    my $to_call = defined($rpc) ? $rpc : $http_method_map{$method};
+
+    # backwards compat naming for RPC style
+    if ( $to_call =~ m/^(create|edit)$/ ) {
+        $to_call .= '_form';
+    }
     $c->log->debug("$method -> $to_call") if $c->debug;
+
+    # so TT (others?) auto-template-deduction works just like RPC style
+    $c->action->name($to_call);
+    $c->action->reverse( join( '/', $c->action->namespace, $to_call ) );
+
     return $self->can($to_call) ? $self->$to_call($c) : $self->view($c);
 }
 
 =head2 req_method( I<context> )
 
 Internal method. Returns the HTTP method name, allowing
-POST to serve as a tunnel when the C<_http_method> param
-is present. Since most browsers do not support PUT or DELETE
-HTTP methods, you can use the C<_http_method> param to tunnel
+POST to serve as a tunnel when the C<_http_method> or
+C<x-tunneled-method> param is present. 
+Since most browsers do not support PUT or DELETE
+HTTP methods, you can use the special param to tunnel
 the desired HTTP method and then POST instead.
 
 =cut
 
+my @tunnel_param_names = qw( x-tunneled-method _http_method );
+
 sub req_method {
     my ( $self, $c ) = @_;
     if ( uc( $c->req->method ) eq 'POST' ) {
-        return exists $c->req->params->{'_http_method'}
-            ? uc(
-            ref $c->req->params->{'_http_method'}
-            ? $c->req->params->{'_http_method'}->[0]
-            : $c->req->params->{'_http_method'}
-            )
-            : 'POST';
-
+        for my $name (@tunnel_param_names) {
+            if ( exists $c->req->params->{$name} ) {
+                return uc( $c->req->params->{$name} );
+            }
+        }
     }
     return uc( $c->req->method );
 }
@@ -158,7 +173,7 @@ Overrides base method to disable chaining.
 
 sub edit {
     my ( $self, $c ) = @_;
-    return $self->NEXT::edit($c);
+    return $self->next::method($c);
 }
 
 =head2 view( I<context> )
@@ -169,7 +184,7 @@ Overrides base method to disable chaining.
 
 sub view {
     my ( $self, $c ) = @_;
-    return $self->NEXT::view($c);
+    return $self->next::method($c);
 }
 
 =head2 save( I<context> )
@@ -180,7 +195,7 @@ Overrides base method to disable chaining.
 
 sub save {
     my ( $self, $c ) = @_;
-    return $self->NEXT::save($c);
+    return $self->next::method($c);
 }
 
 =head2 rm( I<context> )
@@ -191,7 +206,27 @@ Overrides base method to disable chaining.
 
 sub rm {
     my ( $self, $c ) = @_;
-    return $self->NEXT::rm($c);
+    return $self->next::method($c);
+}
+
+=head2 postcommit( I<context>, I<object> )
+
+Overrides base method to redirect to REST-style URL.
+
+=cut
+
+sub postcommit {
+    my ( $self, $c, $o ) = @_;
+    my $pk = $self->primary_key;
+
+    if ( $c->action->name eq 'rm' ) {
+        $c->response->redirect( $c->uri_for('') );
+    }
+    else {
+        $c->response->redirect( $c->uri_for( '', $o->$pk ) );
+    }
+
+    1;
 }
 
 1;

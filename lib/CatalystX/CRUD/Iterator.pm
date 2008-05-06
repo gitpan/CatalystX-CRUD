@@ -4,7 +4,7 @@ use warnings;
 use Carp;
 use base qw( CatalystX::CRUD );
 
-our $VERSION = '0.25';
+our $VERSION = '0.26';
 
 =head1 NAME
 
@@ -93,7 +93,7 @@ under the I<method_name> accessor.
 sub next {
     my $self = shift;
     my $next = $self->{iterator}->next;
-    return unless defined($next);
+    return unless $next;
 
     my $obj = $self->{cxco}->new;
     $obj->{delegate} = $next;

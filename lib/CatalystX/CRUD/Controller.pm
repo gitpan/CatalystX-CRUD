@@ -6,8 +6,12 @@ use base qw(
     Catalyst::Controller
 );
 use Carp;
+use Catalyst::Utils;
+use Class::C3;
 
-our $VERSION = '0.25';
+__PACKAGE__->mk_accessors(qw( model_adapter ));
+
+our $VERSION = '0.26';
 
 =head1 NAME
 
@@ -21,16 +25,18 @@ CatalystX::CRUD::Controller - base class for CRUD controllers
     use base qw( CatalystX::CRUD::Controller );
     
     __PACKAGE__->config(
-                    form_class              => 'MyForm::Foo',
-                    init_form               => 'init_with_foo',
-                    init_object             => 'foo_from_form',
-                    default_template        => 'path/to/foo/edit.tt',
-                    model_name              => 'Foo',
-                    primary_key             => 'id',
-                    view_on_single_result   => 0,
-                    page_size               => 50,
-                    allow_GET_writes        => 0,
-                    );
+            form_class              => 'MyForm::Foo',
+            init_form               => 'init_with_foo',
+            init_object             => 'foo_from_form',
+            default_template        => 'path/to/foo/edit.tt',
+            model_name              => 'Foo',
+            model_adapter           => 'FooAdapter', # optional
+            model_meta              => { moniker => 'SomeTable' },  # optional
+            primary_key             => 'id',
+            view_on_single_result   => 0,
+            page_size               => 50,
+            allow_GET_writes        => 0,
+    );
                     
     1;
     
@@ -96,10 +102,10 @@ sub default : Private {
 
 Attribute: chained to namespace, expecting one argument.
 
-Calls B<model_name> read() method with a single key/value pair, 
+Calls B<do_model> fetch() method with a single key/value pair, 
 using the B<primary_key> config value as the key and the I<primary_key> as the value.
 
-The return value of read() is saved in stash() as C<object>.
+The return value of fetch() is saved in stash() as C<object>.
 
 The I<primary_key> value is saved in stash() as C<object_id>.
 
@@ -110,7 +116,7 @@ sub fetch : Chained('/') PathPrefix CaptureArgs(1) {
     $c->stash->{object_id} = $id;
     $c->log->debug("fetching id = $id") if $c->debug;
     my @arg = $id ? ( $self->primary_key() => $id ) : ();
-    $c->stash->{object} = $c->model( $self->model_name )->fetch(@arg);
+    $c->stash->{object} = $self->do_model( $c, 'fetch', @arg );
     if ( $self->has_errors($c) or !$c->stash->{object} ) {
         $self->throw_error( 'No such ' . $self->model_name );
     }
@@ -120,15 +126,15 @@ sub fetch : Chained('/') PathPrefix CaptureArgs(1) {
 
 Attribute: Local
 
-Namespace for creating a new object. Forwards to fetch() and edit()
+Namespace for creating a new object. Calls to fetch() and edit()
 with a B<primary_key> value of C<0> (zero).
 
 =cut
 
 sub create : Local {
     my ( $self, $c ) = @_;
-    $c->forward( 'fetch', [0] );
-    $c->detach('edit');
+    $self->fetch( $c, 0 );
+    $self->edit($c);
 }
 
 =head2 edit
@@ -220,6 +226,7 @@ sub save : PathPart Chained('fetch') Args(0) {
     # get a valid object
     my $obj = $self->form_to_object($c);
     if ( !$obj ) {
+        $c->log->debug("form_to_object() returned false") if $c->debug;
         return 0;
     }
 
@@ -332,6 +339,69 @@ sub count : Local {
 The following methods are not visible via the URI namespace but
 directly affect the dispatch chain.
 
+=head2 new( I<c>, I<args> )
+
+Sets up the controller instance, detecting and instantiating the model_adapter
+if set in config().
+
+=cut
+
+sub new {
+    my ( $class, $app_class, $args ) = @_;
+    my $self = $class->next::method( $app_class, $args );
+
+    # if model_adapter class is defined, load and instantiate it.
+    if ( $self->config->{model_adapter} ) {
+        Catalyst::Utils::ensure_class_loaded(
+            $self->config->{model_adapter} );
+        $self->model_adapter(
+            $self->config->{model_adapter}->new(
+                {   model_name => $self->config->{model_name},
+                    model_meta => $self->config->{model_meta}
+                }
+            )
+        );
+    }
+    return $self;
+}
+
+=head2 do_model( I<context>, I<method>, I<args> )
+
+Checks for presence of model_adapter() instance and calls I<method> on either model()
+or model_adapter() as appropriate.
+
+=cut
+
+sub do_model {
+    my $self   = shift;
+    my $c      = shift or $self->throw_error("context required");
+    my $method = shift or $self->throw_error("method required");
+    if ( $self->model_adapter ) {
+        return $self->model_adapter->$method( $c, @_ );
+    }
+    else {
+        return $c->model( $self->model_name )->$method(@_);
+    }
+}
+
+=head2 model_can( I<context>, I<method_name> )
+
+Returns can() value from model_adapter() or model() as appropriate.
+
+=cut
+
+sub model_can {
+    my $self   = shift;
+    my $c      = shift or $self->throw_error("context required");
+    my $method = shift or $self->throw_error("method name required");
+    if ( $self->model_adapter ) {
+        return $self->model_adapter->can($method);
+    }
+    else {
+        return $c->model( $self->model_name )->can($method);
+    }
+}
+
 =head2 form
 
 Returns an instance of config->{form_class}. A single form object is instantiated and
@@ -341,7 +411,7 @@ method it will be called before returning.
 =cut
 
 sub form {
-    my $self = shift;
+    my ( $self, $c ) = @_;
     $self->{_form} ||= $self->form_class->new;
     if ( $self->{_form}->can('clear') ) {
         $self->{_form}->clear;
@@ -349,6 +419,7 @@ sub form {
     elsif ( $self->{_form}->can('reset') ) {
         $self->{_form}->reset;
     }
+    $self->next::method($c) if $self->next::can;
     return $self->{_form};
 }
 
@@ -407,15 +478,21 @@ sub form_to_object {
 
 =head2 save_obj( I<context>, I<object> )
 
-Calls the update() or create() method on the I<object>, picking the method
-based on whether C<object_id> in stash() evaluates true (update) or false (create).
+Calls the update() or create() method on the I<object> (or model_adapter()),
+picking the method based on whether C<object_id> in stash() 
+evaluates true (update) or false (create).
 
 =cut
 
 sub save_obj {
     my ( $self, $c, $obj ) = @_;
     my $method = $c->stash->{object_id} ? 'update' : 'create';
-    $obj->$method;
+    if ( $self->model_adapter ) {
+        $self->model_adapter->$method( $c, $obj );
+    }
+    else {
+        $obj->$method;
+    }
 }
 
 =head2 precommit( I<context>, I<object> )
@@ -444,8 +521,7 @@ sub postcommit {
         $c->response->redirect( $c->uri_for('') );
     }
     else {
-        $c->response->redirect(
-            $c->uri_for( '', $o->delegate->$pk, 'view' ) );
+        $c->response->redirect( $c->uri_for( '', $o->$pk, 'view' ) );
     }
 
     1;
@@ -474,6 +550,16 @@ sub view_on_single_result {
         $self->can_write($c) ? 'edit' : 'view' );
 }
 
+=head2 make_query( I<context>, I<arg> )
+
+This is an optional method. If implemented, do_search() will call this method
+and pass the return value on to the appropriate model methods. If not implemented,
+the model will be tested for a make_query() method and it will be called instead.
+
+Either the controller subclass or the model B<must> implement a make_query() method.
+
+=cut
+
 =head2 do_search( I<context>, I<arg> )
 
 Prepare and execute a search. Called internally by list()
@@ -493,15 +579,25 @@ sub do_search {
         return;
     }
 
-    # turn flag on if explicitly turned off
+    # turn flag on unless explicitly turned off
     $c->stash->{view_on_single_result} = 1
         unless exists $c->stash->{view_on_single_result};
 
-    my $query = $c->model( $self->model_name )->make_query(@arg);
-    my $count = $c->model( $self->model_name )->count($query) || 0;
+    my $query;
+    if ( $self->can('make_query') ) {
+        $query = $self->make_query( $c, @arg );
+    }
+    elsif ( $self->model_can( $c, 'make_query' ) ) {
+        $query = $self->do_model( $c, 'make_query', @arg );
+    }
+    else {
+        $self->throw_error(
+            "neither controller nor model implement a make_query() method");
+    }
+    my $count = $self->do_model( $c, 'count', $query ) || 0;
     my $results;
     unless ( $c->stash->{fetch_no_results} ) {
-        $results = $c->model( $self->model_name )->search($query);
+        $results = $self->do_model( $c, 'search', $query );
     }
     if (    $results
         and $count == 1
@@ -511,12 +607,15 @@ sub do_search {
         $c->response->redirect($uri);
     }
     else {
+
+        my $pager;
+        if ( $count && $self->model_can( $c, 'make_pager' ) ) {
+            $pager = $self->do_model( $c, 'make_pager', $count, $results );
+        }
+
         $c->stash->{results} = {
-            count => $count,
-            pager => $count
-            ? ( $c->model( $self->model_name )->make_pager( $count, $results )
-                    || undef )
-            : undef,
+            count   => $count,
+            pager   => $pager,
             results => $results,
             query   => $query,
         };

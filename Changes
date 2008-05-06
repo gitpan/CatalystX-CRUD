@@ -93,3 +93,29 @@ Revision history for CatalystX-CRUD
 0.25    1 Feb 2008
         * fix bug to clarify what happens when form_to_object() returns false.
 
+0.26    06 May 2008
+        * fix bug in Iterator to test for !next() rather than !defined(next())
+        * re-set action in ::REST->default so that RPC-style template naming works
+        * use :Path instead of :Private on ::REST->default
+        * fix several bugs with action() set in ::REST
+        * ::Controller->form now calls NEXT::form. This is for REST compat and @INC oddness.
+        * added new ::ModelAdapter class and refactored base Controller to use it.
+        * moved make_pager() from base ::Model to ::Model::Utils
+        * added new ::Test classes to ease writing controller-agnostic tests.
+        * new, optional 'make_query' method in Controller.
+        * move AUTOLOAD() and can() hackery out of base Model into base Object where it belongs.
+          Now there is only 2 sins instead of the 3 in previous releases (where we no longer
+          monkey-patch the subs at run time).
+        * refactor tests to actually perform some CRUD.
+        * add ::ModelAdapter::File example.
+        * add envvar CXCRUD_TEST in base CX::CRUD to cluck() stack traces on exceptions. Mostly
+          useful during testing since the ::Test::Controller now returns only the error.
+        * renamed 'buffer' to 'content' in ::Object::File.
+        * ::Model::File->fetch() will now always return an object even if it does not yet
+          exist on the filesystem.
+        * change default create() method in Controller to call methods directly instead of forward()ing.
+        * add create() method to REST that just redirects to create_form().
+        * change from 'use NEXT' to 'use Class::C3'
+        * added support for "x-tunneled-method" param to REST controller in addition to "_http_method". 
+          This is for compat with Catalyst::Request::REST::ForBrowsers.
+

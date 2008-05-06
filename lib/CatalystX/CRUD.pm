@@ -4,17 +4,11 @@ use warnings;
 use strict;
 use Catalyst::Exception;
 
+our $VERSION = '0.26';
+
 =head1 NAME
 
 CatalystX::CRUD - CRUD framework for Catalyst applications
-
-=head1 VERSION
-
-Version 0.01
-
-=cut
-
-our $VERSION = '0.25';
 
 =head1 DESCRIPTION
 
@@ -61,7 +55,7 @@ processing instead of returning. See fetch() for an example.
 sub throw_error {
     my $self = shift;
     my $msg = shift || 'unknown error';
-    Catalyst::Exception->throw($msg);
+    Carp::confess($msg);
 }
 
 =head1 AUTHOR
@@ -105,6 +99,8 @@ L<http://search.cpan.org/dist/CatalystX-CRUD>
 =back
 
 =head1 ACKNOWLEDGEMENTS
+
+Thanks to Zbigniew Lukasiak and Matt Trout for feedback and API ideas.
 
 =head1 COPYRIGHT & LICENSE
 

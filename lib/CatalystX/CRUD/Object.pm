@@ -1,12 +1,14 @@
 package CatalystX::CRUD::Object;
 use strict;
 use warnings;
-use base qw( CatalystX::CRUD Class::Accessor::Fast );
+use base qw( Class::Accessor::Fast CatalystX::CRUD );
 use Carp;
+use Class::C3;
+Class::C3::initialize();
 
 __PACKAGE__->mk_ro_accessors(qw( delegate ));
 
-our $VERSION = '0.25';
+our $VERSION = '0.26';
 
 =head1 NAME
 
@@ -52,7 +54,7 @@ Generic constructor. I<args> may be a hash or hashref.
 sub new {
     my $class = shift;
     my $arg = ref( $_[0] ) eq 'HASH' ? $_[0] : {@_};
-    return $class->SUPER::new($arg);
+    return $class->next::method($arg);
 }
 
 =head2 delegate
@@ -96,6 +98,57 @@ sub create { shift->throw_error("must implement create") }
 sub read   { shift->throw_error("must implement read") }
 sub update { shift->throw_error("must implement update") }
 sub delete { shift->throw_error("must implement delete") }
+
+=head2 AUTOLOAD
+
+Some black magic hackery to make Object classes act like
+they are overloaded delegate()s.
+
+=cut
+
+sub AUTOLOAD {
+    my $obj            = shift;
+    my $obj_class      = ref($obj) || $obj;
+    my $delegate_class = ref( $obj->delegate ) || $obj->delegate;
+    my $method         = our $AUTOLOAD;
+    $method =~ s/.*://;
+    return if $method eq 'DESTROY';
+    if ( $obj->delegate->can($method) ) {
+        return $obj->delegate->$method(@_);
+    }
+
+    $obj->throw_error( "method '$method' not implemented in class "
+            . "'$obj_class' or '$delegate_class'" );
+
+}
+
+# this overrides the basic can()
+# to always call secondary can() on its delegate.
+# we have to UNIVERSAL::can because we are overriding can()
+# and would otherwise have a recursive nightmare.
+
+=head2 can( I<method> )
+
+Overrides basic can() method to call can() first on the delegate
+and secondly (fallback) on the Object class itself.
+
+=cut
+
+sub can {
+    my ( $obj, $method, @arg ) = @_;
+    if ( ref($obj) ) {
+
+        # object method tries object_class first,
+        # then the delegate().
+        return UNIVERSAL::can( ref($obj), $method )
+            || $obj->delegate->can( $method, @arg );
+    }
+    else {
+
+        # class method
+        return UNIVERSAL::can( $obj, $method );
+    }
+}
 
 1;
 __END__

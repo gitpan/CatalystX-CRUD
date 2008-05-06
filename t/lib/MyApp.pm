@@ -5,7 +5,7 @@ use Carp;
 use Data::Dump qw( dump );
 use File::Temp;
 
-our $VERSION = '0.02';
+our $VERSION = '0.03';
 
 __PACKAGE__->setup();
 
@@ -24,7 +24,7 @@ sub foo : Local {
 
     #carp dump $file;
 
-    $file->buffer('hello world');
+    $file->content('hello world');
 
     $file->create;
 
@@ -43,11 +43,11 @@ sub foo : Local {
 
     $file->read;
 
-    if ( $file->buffer ne 'hello world' ) {
+    if ( $file->content ne 'hello world' ) {
         croak "bad read";
     }
 
-    $file->buffer('change the text');
+    $file->content('change the text');
 
     #carp dump $file;
 

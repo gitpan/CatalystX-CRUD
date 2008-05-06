@@ -3,9 +3,10 @@ use strict;
 use warnings;
 use base qw( CatalystX::CRUD Class::Accessor::Fast );
 use Sort::SQL;
+use Data::Pageset;
 __PACKAGE__->mk_accessors(qw( use_ilike ne_sign ));
 
-our $VERSION = '0.25';
+our $VERSION = '0.26';
 
 =head1 NAME
 
@@ -91,6 +92,11 @@ _page and _page_size.
 Ignore _page_size, _page and _offset and do not return a limit
 or offset value.
 
+=item _op
+
+If set to C<OR> then the query columns will be marked as OR'd together,
+rather than AND'd together (the default).
+
 =back
 
 =cut
@@ -157,7 +163,8 @@ sub sql_query_as_string {
         next unless grep {m/\S/} @v;
         push( @s, "$p = " . join( ' or ', @v ) );
     }
-    return join( ' AND ', @s );
+    my $op = $self->context->req->params->{_op} || 'AND';
+    return join( " $op ", @s );
 }
 
 =head2 params_to_sql_query( I<field_names> )
@@ -191,20 +198,27 @@ sub params_to_sql_query {
     my $like = $self->use_ilike ? 'ilike' : 'like';
     my $treat_like_int
         = $self->can('treat_like_int') ? $self->treat_like_int : {};
+    my $ORify
+        = ( exists $c->req->params->{_op} && $c->req->params->{_op} eq 'OR' )
+        ? 1
+        : 0;
+    my $fuzzy = $c->req->params->{_fuzzy} || 0;
 
     for my $p (@$field_names) {
 
         next unless exists $c->req->params->{$p};
-        my @v    = $c->req->param($p);
-        my @safe = @v;
-        next unless grep { defined && m/./ } @safe;
-
+        my @v = $c->req->param($p);
+        next unless grep { defined && m/./ } @v;
+        my @copy = @v;
         $query{$p} = \@v;
+        if ($fuzzy) {
+            grep { $_ .= '%' unless m/[\%\*]/ } @copy;
+        }
 
         # normalize wildcards and set sql
-        if ( grep {/[\%\*]|^!/} @v ) {
-            grep {s/\*/\%/g} @safe;
-            my @wild = grep {m/\%/} @safe;
+        if ( grep {/[\%\*]|^!/} @copy ) {
+            grep {s/\*/\%/g} @copy;
+            my @wild = grep {m/\%/} @copy;
             if (@wild) {
                 if ( exists $treat_like_int->{$p} ) {
                     push( @sql,
@@ -216,17 +230,48 @@ sub params_to_sql_query {
             }
 
             # allow for negation of query
-            my @not = grep {m/^!/} @safe;
+            my @not = grep {m/^!/} @copy;
             if (@not) {
                 push( @sql, ( $p => { $ne => [ grep {s/^!//} @not ] } ) );
             }
         }
         else {
-            push( @sql, $p => [@safe] );
+            push( @sql, $p => [@copy] );
         }
     }
 
-    return { sql => \@sql, query => \%query };
+    return {
+        sql => ( scalar(@sql) > 2 && $ORify ) ? [ 'or' => \@sql ] : \@sql,
+        query => \%query
+    };
+}
+
+=head2 make_pager( I<total> )
+
+Returns a Data::Pageset object using I<total>,
+either the C<_page_size> param or the value of page_size(),
+and the C<_page> param or C<1>.
+
+If the C<_no_page> request param is true, will return undef.
+B<NOTE:> Model authors should check (and respect) the C<_no_page>
+param when constructing queries.
+
+=cut
+
+sub make_pager {
+    my ( $self, $count ) = @_;
+    my $c = $self->context;
+    return if $c->req->param('_no_page');
+    return Data::Pageset->new(
+        {   total_entries    => $count,
+            entries_per_page => $c->req->param('_page_size')
+                || $self->page_size,
+            current_page => $c->req->param('_page')
+                || 1,
+            pages_per_set => 10,        #TODO make this configurable?
+            mode          => 'slide',
+        }
+    );
 }
 
 1;

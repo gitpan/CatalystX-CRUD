@@ -4,15 +4,15 @@ use warnings;
 use base qw( CatalystX::CRUD::Object );
 use Path::Class::File;
 use Carp;
-use NEXT;
+use Class::C3;
 use overload(
     q[""]    => sub { shift->delegate },
     fallback => 1,
 );
 
-__PACKAGE__->mk_accessors(qw( buffer ));
+__PACKAGE__->mk_accessors(qw( content file ));
 
-our $VERSION = '0.25';
+our $VERSION = '0.26';
 
 =head1 NAME
 
@@ -43,13 +43,13 @@ Returns new CXCO::File object.
 
 sub new {
     my $class = shift;
-    my $self  = $class->NEXT::new(@_);
+    my $self  = $class->next::method(@_);
     my $file  = $self->{file} or $self->throw_error("file param required");
     $self->{delegate} = Path::Class::File->new($file);
     return $self;
 }
 
-=head2 buffer
+=head2 content
 
 The contents of the delegate() file object. Set when you call read().
 Set it yourself and call create() or update() as appropriate to write to the file.
@@ -58,7 +58,7 @@ Set it yourself and call create() or update() as appropriate to write to the fil
 
 =head2 create
 
-Writes buffer() to a file. If the file already exists, will throw_error(), so
+Writes content() to a file. If the file already exists, will throw_error(), so
 call it like:
 
  -s $file ? $file->update : $file->create;
@@ -81,7 +81,7 @@ sub create {
 
 =head2 read
 
-Slurp contents of file into buffer(). No check is performed as to whether
+Slurp contents of file into content(). No check is performed as to whether
 the file exists, so call like:
 
  $file->read if -s $file;
@@ -90,7 +90,7 @@ the file exists, so call like:
 
 sub read {
     my $self = shift;
-    $self->{buffer} = $self->delegate->slurp;
+    $self->{content} = $self->delegate->slurp;
     return $self;
 }
 
@@ -119,10 +119,10 @@ sub delete {
 
 sub _write {
     my $self = shift;
-    my $dir = $self->delegate->dir;
+    my $dir  = $self->delegate->dir;
     $dir->mkpath;
-    my $fh   = $self->delegate->openw();
-    print {$fh} $self->buffer;
+    my $fh = $self->delegate->openw();
+    print {$fh} $self->content;
     $fh->close;
     return -s $self->delegate;
 }
