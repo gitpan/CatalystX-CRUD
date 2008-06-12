@@ -7,11 +7,34 @@ use base qw(
 );
 use Carp;
 use Catalyst::Utils;
+use CatalystX::CRUD::Results;
 use Class::C3;
 
-__PACKAGE__->mk_accessors(qw( model_adapter ));
+__PACKAGE__->mk_accessors(
+    qw(
+        model_adapter
+        form_class
+        init_form
+        init_object
+        model_name
+        model_meta
+        default_template
+        primary_key
+        allow_GET_writes
+        naked_results
+        page_size
+        )
+);
 
-our $VERSION = '0.26';
+__PACKAGE__->config(
+    primary_key           => 'id',
+    view_on_single_result => 0,
+    page_size             => 50,
+    allow_GET_writes      => 0,
+    naked_results         => 0,
+);
+
+our $VERSION = '0.27';
 
 =head1 NAME
 
@@ -36,6 +59,7 @@ CatalystX::CRUD::Controller - base class for CRUD controllers
             view_on_single_result   => 0,
             page_size               => 50,
             allow_GET_writes        => 0,
+            naked_results           => 0,
     );
                     
     1;
@@ -270,7 +294,12 @@ sub rm : PathPart Chained('fetch') Args(0) {
     unless ( $self->precommit( $c, $o ) ) {
         return 0;
     }
-    $o->delete;
+    if ( $self->model_adapter ) {
+        $self->model_adapter->delete( $c, $o );
+    }
+    else {
+        $o->delete;
+    }
     $self->postcommit( $c, $o );
 }
 
@@ -565,6 +594,14 @@ Either the controller subclass or the model B<must> implement a make_query() met
 Prepare and execute a search. Called internally by list()
 and search().
 
+Results are saved in stash() under the C<results> key.
+
+If B<naked_results> is true, then results are set just as they are
+returned from search() or list() (directly from the Model).
+
+If B<naked_results> is false (default), then results is a
+CatalystX::CRUD::Results object.
+
 =cut
 
 sub do_search {
@@ -572,7 +609,7 @@ sub do_search {
 
     # stash the form so it can be re-displayed
     # subclasses must stick-ify it in their own way.
-    $c->stash->{form} ||= $self->form;
+    $c->stash->{form} ||= $self->form($c);
 
     # if we have no input, just return for initial search
     if ( !@arg && !$c->req->param && $c->action->name eq 'search' ) {
@@ -613,12 +650,14 @@ sub do_search {
             $pager = $self->do_model( $c, 'make_pager', $count, $results );
         }
 
-        $c->stash->{results} = {
-            count   => $count,
-            pager   => $pager,
-            results => $results,
-            query   => $query,
-        };
+        $c->stash->{results}
+            = $self->naked_results ? $results : CatalystX::CRUD::Results->new(
+            {   count   => $count,
+                pager   => $pager,
+                results => $results,
+                query   => $query,
+            }
+            );
     }
 }
 
@@ -644,17 +683,11 @@ The following methods simply return the config() value of the same name.
 
 =item allow_GET_writes
 
+=item naked_results
+
 =back
 
 =cut
-
-sub form_class       { shift->config->{form_class} }
-sub init_form        { shift->config->{init_form} }
-sub init_object      { shift->config->{init_object} }
-sub model_name       { shift->config->{model_name} }
-sub default_template { shift->config->{default_template} }
-sub primary_key      { shift->config->{primary_key} }
-sub allow_GET_writes { shift->config->{allow_GET_writes} }
 
 # see http://use.perl.org/~LTjake/journal/31738
 # PathPrefix will likely end up in an official Catalyst RSN.

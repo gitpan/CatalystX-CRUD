@@ -5,7 +5,7 @@ use base qw( CatalystX::CRUD::Controller );
 use Carp;
 use Class::C3;
 
-our $VERSION = '0.26';
+our $VERSION = '0.27';
 
 =head1 NAME
 
@@ -110,12 +110,12 @@ my %http_method_map = (
 sub default : Path {
     my ( $self, $c, @arg ) = @_;
 
-    my $oid = shift @arg;
+    my $oid = shift @arg || '';
     my $rpc = shift @arg;    # RPC compat
     $c->log->debug("default OID: $oid") if $c->debug;
 
     my $method = $self->req_method($c);
-    if ( !defined $oid && $method eq 'GET' ) {
+    if ( !length $oid && $method eq 'GET' ) {
         $c->action->name('list');
         $c->action->reverse( join( '/', $c->action->namespace, 'list' ) );
         return $self->list($c);

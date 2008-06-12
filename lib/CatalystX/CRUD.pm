@@ -4,7 +4,7 @@ use warnings;
 use strict;
 use Catalyst::Exception;
 
-our $VERSION = '0.26';
+our $VERSION = '0.27';
 
 =head1 NAME
 

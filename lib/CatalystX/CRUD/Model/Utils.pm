@@ -6,7 +6,7 @@ use Sort::SQL;
 use Data::Pageset;
 __PACKAGE__->mk_accessors(qw( use_ilike ne_sign ));
 
-our $VERSION = '0.26';
+our $VERSION = '0.27';
 
 =head1 NAME
 
@@ -101,26 +101,35 @@ rather than AND'd together (the default).
 
 =cut
 
+sub _which_sort {
+    my ( $self, $c ) = @_;
+    my $params = $c->req->params;
+    return $params->{'_order'} if defined $params->{'_order'};
+    return join( ' ', $params->{'_sort'}, $params->{'_dir'} )
+        if defined( $params->{'_sort'} ) && defined( $params->{'_dir'} );
+    return $c->controller->primary_key . ' DESC';
+}
+
 sub make_sql_query {
     my $self        = shift;
     my $c           = $self->context;
     my $field_names = shift
-        || $c->controller->field_names
+        || $c->controller->field_names($c)
         || $self->throw_error("field_names required");
 
-    my $p2q = $self->params_to_sql_query($field_names);
-    my $sp
-        = Sort::SQL->string2array( $c->req->param('_order')
-            || join( ' ', $c->req->param('_sort'), $c->req->param('_dir') )
-            || ( $c->controller->primary_key . ' DESC' ) );
+    my $p2q       = $self->params_to_sql_query($field_names);
+    my $params    = $c->req->params;
+    my $sp        = Sort::SQL->string2array( $self->_which_sort($c) );
     my $s         = join( ' ', map { each %$_ } @$sp );
-    my $offset    = $c->req->param('_offset');
-    my $page_size = $c->request->param('_page_size') || $self->page_size;
+    my $offset    = $params->{'_offset'};
+    my $page_size = $params->{'_page_size'}
+        || $c->controller->page_size
+        || $self->page_size;
 
     # don't let users DoS us. unless they ask to (see _no_page).
     $page_size = 200 if $page_size > 200;
 
-    my $page = $c->req->param('_page') || 1;
+    my $page = $params->{'_page'} || 1;
 
     if ( !defined($offset) ) {
         $offset = ( $page - 1 ) * $page_size;
@@ -140,7 +149,7 @@ sub make_sql_query {
     );
 
     # undo what we've done if asked.
-    if ( $c->req->param('_no_page') ) {
+    if ( $params->{'_no_page'} ) {
         delete $query{limit};
         delete $query{offset};
     }
@@ -260,13 +269,15 @@ param when constructing queries.
 
 sub make_pager {
     my ( $self, $count ) = @_;
-    my $c = $self->context;
-    return if $c->req->param('_no_page');
+    my $c      = $self->context;
+    my $params = $c->req->params;
+    return if $params->{'_no_page'};
     return Data::Pageset->new(
         {   total_entries    => $count,
-            entries_per_page => $c->req->param('_page_size')
+            entries_per_page => $params->{'_page_size'}
+                || $c->controller->page_size
                 || $self->page_size,
-            current_page => $c->req->param('_page')
+            current_page => $params->{'_page'}
                 || 1,
             pages_per_set => 10,        #TODO make this configurable?
             mode          => 'slide',

@@ -9,7 +9,7 @@ use base qw(
 use Carp;
 use Class::C3;
 
-our $VERSION = '0.26';
+our $VERSION = '0.27';
 
 __PACKAGE__->mk_accessors(qw( object_class ));
 

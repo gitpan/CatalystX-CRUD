@@ -13,11 +13,13 @@ lib/CatalystX/CRUD/Object/File.pm
 lib/CatalystX/CRUD/Model/File.pm
 lib/CatalystX/CRUD/Iterator/File.pm
 lib/CatalystX/CRUD/Tutorial.pod
+lib/CatalystX/CRUD/Results.pm
 t/00-load.t
 t/boilerplate.t
 t/pod-coverage.t
 t/pod.t
 t/01-file.t
+t/02-controller.t
 t/lib/MyApp.pm
 t/lib/MyApp/File.pm
 t/lib/MyApp/Model/File.pm
