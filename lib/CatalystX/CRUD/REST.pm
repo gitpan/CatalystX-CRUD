@@ -5,7 +5,7 @@ use base qw( CatalystX::CRUD::Controller );
 use Carp;
 use Class::C3;
 
-our $VERSION = '0.27';
+our $VERSION = '0.28';
 
 =head1 NAME
 
@@ -217,13 +217,13 @@ Overrides base method to redirect to REST-style URL.
 
 sub postcommit {
     my ( $self, $c, $o ) = @_;
-    my $pk = $self->primary_key;
+    my $id = $self->make_primary_key_string($o);
 
     if ( $c->action->name eq 'rm' ) {
         $c->response->redirect( $c->uri_for('') );
     }
     else {
-        $c->response->redirect( $c->uri_for( '', $o->$pk ) );
+        $c->response->redirect( $c->uri_for( '', $id ) );
     }
 
     1;

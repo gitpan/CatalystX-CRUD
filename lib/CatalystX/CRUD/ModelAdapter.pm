@@ -8,7 +8,7 @@ use base qw(
 use Class::C3;
 use Carp;
 
-__PACKAGE__->mk_accessors(qw( model_name model_meta ));
+__PACKAGE__->mk_accessors(qw( model_name context ));
 
 =head1 NAME
 
@@ -65,7 +65,7 @@ CatalystX::CRUD::ModelAdapter inherits from CatalystX::CRUD.
 
 The following methods should be implemented in your subclass.
 
-=head2 new_object( I<context> )
+=head2 new_object( I<controller>, I<context> )
 
 Should return a new instance from the Model you are adapting.
 
@@ -73,7 +73,7 @@ Should return a new instance from the Model you are adapting.
 
 sub new_object { shift->throw_error("must implement new_object"); }
 
-=head2 fetch( I<context>, I<args> )
+=head2 fetch( I<controller>, I<context>, I<args> )
 
 Should return an instance of the Model you are adapting, based
 on I<args>.
@@ -82,7 +82,7 @@ on I<args>.
 
 sub fetch { shift->throw_error("must implement fetch") }
 
-=head2 search( I<context>, I<args> )
+=head2 search( I<controller>, I<context>, I<args> )
 
 Should return an arrayref of instances of the Model you are adapting,
 based on I<args>.
@@ -91,7 +91,7 @@ based on I<args>.
 
 sub search { shift->throw_error("must implement search") }
 
-=head2 iterator( I<context>, I<args> )
+=head2 iterator( I<controller>, I<context>, I<args> )
 
 Should return an iterator of instances of the Model you are adapting,
 based on I<args>.
@@ -100,7 +100,7 @@ based on I<args>.
 
 sub iterator { shift->throw_error("must implement iterator") }
 
-=head2 count( I<context>, I<args> )
+=head2 count( I<controller>, I<context>, I<args> )
 
 Should return an integer representing the numbef of matching instances
 of the Model you are adapting, based on I<args>.
@@ -109,7 +109,7 @@ of the Model you are adapting, based on I<args>.
 
 sub count { shift->throw_error("must implement count") }
 
-=head2 make_query( I<context> )
+=head2 make_query( I<context>, I<controller> )
 
 Should return appropriate values for passing to search(), iterator() and
 count(). See CataystX::CRUD::Model for examples.

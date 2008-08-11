@@ -12,7 +12,7 @@ use overload(
 
 __PACKAGE__->mk_accessors(qw( content file ));
 
-our $VERSION = '0.27';
+our $VERSION = '0.28';
 
 =head1 NAME
 

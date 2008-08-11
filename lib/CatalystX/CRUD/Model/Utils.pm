@@ -6,7 +6,7 @@ use Sort::SQL;
 use Data::Pageset;
 __PACKAGE__->mk_accessors(qw( use_ilike ne_sign ));
 
-our $VERSION = '0.27';
+our $VERSION = '0.28';
 
 =head1 NAME
 
@@ -107,7 +107,8 @@ sub _which_sort {
     return $params->{'_order'} if defined $params->{'_order'};
     return join( ' ', $params->{'_sort'}, $params->{'_dir'} )
         if defined( $params->{'_sort'} ) && defined( $params->{'_dir'} );
-    return $c->controller->primary_key . ' DESC';
+    my %pks = $c->controller->get_primary_key($c);
+    return join( ' ', map { $_ . ' DESC' } keys %pks );
 }
 
 sub make_sql_query {

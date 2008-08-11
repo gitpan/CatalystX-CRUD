@@ -3,7 +3,7 @@ use strict;
 use warnings;
 use base qw( CatalystX::CRUD::ModelAdapter );
 
-our $VERSION = '0.27';
+our $VERSION = '0.28';
 
 =head1 NAME
 
@@ -39,7 +39,7 @@ Implements required method.
 =cut
 
 sub new_object {
-    my ( $self, $c, @arg ) = @_;
+    my ( $self, $controller, $c, @arg ) = @_;
     my $model = $c->model( $self->model_name );
     $model->new_object(@arg);
 }
@@ -51,7 +51,7 @@ Implements required method.
 =cut
 
 sub fetch {
-    my ( $self, $c, @arg ) = @_;
+    my ( $self, $controller, $c, @arg ) = @_;
     my $model = $c->model( $self->model_name );
     $model->fetch(@arg);
 }
@@ -63,7 +63,7 @@ Implements required method.
 =cut
 
 sub search {
-    my ( $self, $c, @arg ) = @_;
+    my ( $self, $controller, $c, @arg ) = @_;
     my $model = $c->model( $self->model_name );
     $model->search(@arg);
 }
@@ -75,7 +75,7 @@ Implements required method.
 =cut
 
 sub iterator {
-    my ( $self, $c, @arg ) = @_;
+    my ( $self, $controller, $c, @arg ) = @_;
     my $model = $c->model( $self->model_name );
     $model->iterator(@arg);
 }
@@ -87,7 +87,7 @@ Implements required method.
 =cut
 
 sub count {
-    my ( $self, $c, @arg ) = @_;
+    my ( $self, $controller, $c, @arg ) = @_;
     my $model = $c->model( $self->model_name );
     $model->count(@arg);
 }
@@ -99,7 +99,7 @@ Implements required method.
 =cut
 
 sub make_query {
-    my ( $self, $c, @arg ) = @_;
+    my ( $self, $controller, $c, @arg ) = @_;
     my $model = $c->model( $self->model_name );
     $model->make_query(@arg);
 }

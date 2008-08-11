@@ -7,7 +7,7 @@ use base qw( Class::Accessor::Fast );
 
 __PACKAGE__->mk_accessors(qw( params fields ));
 
-our $VERSION = '0.27';
+our $VERSION = '0.28';
 
 =head1 NAME
 
@@ -58,11 +58,17 @@ sub new {
     return $self;
 }
 
+*field_names = \&fields;
+
 =head2 fields( [ I<arrayref> ] )
 
 Get/set the arrayref of field names.
 
 This must be set in new().
+
+=head2 field_names
+
+An alias for fields().
 
 =head2 params( [ I<hashref> ] )
 

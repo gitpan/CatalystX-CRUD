@@ -8,7 +8,7 @@ use Data::Dump qw( dump );
 use Path::Class::File;
 use Class::C3;
 
-our $VERSION = '0.27';
+our $VERSION = '0.28';
 
 =head1 NAME
 

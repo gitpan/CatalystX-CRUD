@@ -5,7 +5,7 @@ use base qw( CatalystX::CRUD::Controller );
 use Carp;
 use Data::Dump;
 
-our $VERSION = '0.27';
+our $VERSION = '0.28';
 
 =head1 NAME
 
@@ -59,15 +59,17 @@ sub form_to_object {
     my $form_meth = $self->init_form;
 
     # id always comes from url but not necessarily from form
-    my $pk = $self->primary_key;
-    my $id = $c->req->params->{$pk} || $c->stash->{object_id};
+    my $id = $c->stash->{object_id};
+    my %pk = $self->get_primary_key( $c, $id );
 
     # initialize the form with the object's values
     $form->$form_meth($obj);
 
     # set param values from request
     $form->params( $c->req->params );
-    $form->param( $pk => $id );
+    for my $field ( keys %pk ) {
+        $form->param( $field => $pk{$field} );
+    }
 
     # override form's values with those from params
     # no_clear is important because we already initialized with object
@@ -84,15 +86,18 @@ sub form_to_object {
     # re-set object's values from the now-valid form
     $form->$obj_meth($obj);
 
-    # set id explicitly since there's some bug
-    # with param() setting it in save()
-    $obj->$pk($id);
+    # set PK(s) explicitly
+    for my $field ( keys %pk ) {
+        $obj->$field( $pk{$field} );
+    }
 
     # let serial column work its magic
-    $obj->$pk(undef)
-        if ( !$obj->$pk || $obj->$pk eq '0' || $id eq '0' );
-
-    #carp "object $pk == $id ? " . $obj->$pk;
+    # if this is a first-time save (create)
+    if ( scalar( keys %pk ) == 1 or $id eq '0' ) {
+        my ( $field, $value ) = each %pk;
+        $obj->$field(undef)
+            if ( !$obj->$field || $obj->$field eq '0' || $value eq '0' );
+    }
 
     #carp $self->serialize_object( $c, $obj );
 

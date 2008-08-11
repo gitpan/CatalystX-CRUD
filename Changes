@@ -127,3 +127,8 @@ Revision history for CatalystX-CRUD
         * refactored base Controller to make all config options into accessors. added t/02-controller
         * change Model::Utils to use req->params rather than param()
 
+0.28    11 Aug 2008
+        * API for ModelAdapter changed to pass controller instance in do_model()
+        * add get_primary_key() and make_primary_key_string() methods to base Controller. 
+          This allows for PKs composed of multiple columns.
+
