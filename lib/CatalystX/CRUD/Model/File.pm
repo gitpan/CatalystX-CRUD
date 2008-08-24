@@ -8,7 +8,9 @@ use Data::Dump qw( dump );
 use Path::Class::File;
 use Class::C3;
 
-our $VERSION = '0.28';
+__PACKAGE__->mk_accessors(qw( inc_path ));
+
+our $VERSION = '0.29';
 
 =head1 NAME
 
@@ -18,14 +20,17 @@ CatalystX::CRUD::Model::File - filesystem CRUD model
 
  package MyApp::Model::Foo;
  use base qw( CatalystX::CRUD::Model::File );
- __PACKAGE__->config->{object_class} = 'MyApp::File';
- __PACKAGE__->config->{inc_path} = [ '/some/path', '/other/path' ];
+ __PACKAGE__->config( 
+    object_class => 'MyApp::File',
+    inc_path     => [ '/some/path', '/other/path' ],
+ );
  
  1;
  
 =head1 DESCRIPTION
 
-CatalystX::CRUD::Model::File is an example implementation of CatalystX::CRUD::Model.
+CatalystX::CRUD::Model::File is an example implementation 
+of CatalystX::CRUD::Model.
 
 =head1 METHODS
 
@@ -35,14 +40,15 @@ Only new or overridden methods are documented here.
 
 =head2 Xsetup
 
-Implements the CXC::Model API. Sets the C<inc_path> config (if not already set)
+Implements the CXC::Model API. 
+Sets the inc_path() (if not already set)
 to the C<root> config value.
 
 =cut
 
 sub Xsetup {
     my ( $self, $c ) = @_;
-    $self->config->{inc_path} ||= [ $c->config->{root} ];
+    $self->{inc_path} ||= [ $c->config->{root} ];
     $self->next::method($c);
 }
 
@@ -96,8 +102,6 @@ Returns the include path from config(). The include path is searched
 by search(), count() and iterator().
 
 =cut
-
-sub inc_path { shift->config->{inc_path} }
 
 =head2 make_query
 
@@ -170,6 +174,108 @@ sub iterator {
     my $self  = shift;
     my $files = $self->search(@_);
     return CatalystX::CRUD::Iterator::File->new($files);
+}
+
+=head2 add_related( I<file>, I<rel_name>, I<other_file_name> )
+
+For I<rel_name> of "dir" will create a symlink for I<other_file_name>'s
+basename to I<file> in the same directory as I<file>.
+
+If a file already exists for I<other_file_name> in the same
+dir as I<file> will throw an error indicating the relationship
+already exists.
+
+If the symlink fails, will throw_error().
+
+If symlink() is not supported on your system, will print an error
+to the Catalyst log.
+
+=cut
+
+sub add_related {
+    my ( $self, $file, $rel_name, $other_file_name ) = @_;
+    my $other_file = $self->fetch( file => $other_file_name );
+
+    unless ( -r $other_file ) {
+        $self->throw_error("no such file $other_file");
+    }
+
+    if ( $rel_name eq 'dir' ) {
+
+        # if in the same dir, already related.
+        if ( $other_file->dir eq $file->dir ) {
+            $self->throw_error("relationship already exists");
+        }
+
+        # if not, create symlink
+        # wrap in eval since win32 (others?) do not support symlink
+        my $link
+            = Path::Class::File->new( $file->dir, $other_file->basename );
+        my $success = 1;
+        my $symlink_supported
+            = eval { $success = symlink( "$file", "$link" ); 1 };
+        if ($symlink_supported) {
+            if ( !$success ) {
+                $self->throw_error("failed to symlink $link => $file: $@");
+            }
+            else {
+                return 1;
+            }
+        }
+        else {
+
+            # symlink() is not supported on this system.
+            # we do not throw_error because that will cause
+            # tests to fail unnecessarily.
+            # however, we need to signal the problem somehow.
+            $self->context->log->error(
+                "symlink() is not supported on this system");
+        }
+
+    }
+    else {
+        $self->throw_error("unsupported relationship name: $rel_name");
+    }
+}
+
+=head2 rm_related( I<file>, I<rel_name>, I<other_file_name> )
+
+For I<rel_name> of "dir" will create a symlink for I<other_file_name>'s
+basename to I<file> in the same directory as I<file>.
+
+If the symlink represented by I<other_file_name> does not exist
+or is not a symlink, will throw an error.
+
+If the unlink fails will also throw an error.
+
+=cut
+
+sub rm_related {
+    my ( $self, $file, $rel_name, $other_file_name ) = @_;
+
+    my $other_file = $self->fetch( file => $other_file_name );
+
+    unless ( -r $other_file ) {
+        $self->throw_error("no such file $other_file : $!");
+    }
+
+    if ( $rel_name eq 'dir' ) {
+        my $link
+            = Path::Class::File->new( $file->dir, $other_file->basename );
+
+        unless ( -l $link ) {
+            $self->throw_error("$other_file is not a symlink");
+        }
+
+        unlink($link) or $self->throw_error("unlink for $link failed: $!");
+
+        return 1;
+
+    }
+    else {
+        $self->throw_error("unsupported relationship name: $rel_name");
+    }
+
 }
 
 1;

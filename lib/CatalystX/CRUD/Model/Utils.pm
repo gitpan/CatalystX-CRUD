@@ -6,7 +6,7 @@ use Sort::SQL;
 use Data::Pageset;
 __PACKAGE__->mk_accessors(qw( use_ilike ne_sign ));
 
-our $VERSION = '0.28';
+our $VERSION = '0.29';
 
 =head1 NAME
 
@@ -24,7 +24,7 @@ CatalystX::CRUD::Model::Utils - helpful methods for your CRUD Model class
  
 =head1 DESCRIPTION
 
-CatalystX::CRUD::Model::Utils provides helpful not non-essential methods
+CatalystX::CRUD::Model::Utils provides helpful, non-essential methods
 for CRUD Model implementations. Stick it in your @ISA to help reduce the
 amount of code you have to write yourself.
 

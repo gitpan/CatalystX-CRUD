@@ -298,7 +298,7 @@ C<lib/MyCRUD/Song/Form.pm> respectively.
     my $self = shift;
     $self->add_fields(
              title => {
-                type      => text',
+                type      => 'text',
                 size      => 30,
                 required  => 1,
                 label     => 'Song Title',
@@ -373,11 +373,12 @@ and C<lib/MyApp/Controller/Song.pm> respectively.
  use strict;
  use warnings;
  use base qw( CatalystX::CRUD::Controller::RHTMLO );
+ use MyCRUD::Album::Form;
  
  __PACKAGE__->config(
   form_class              => 'MyCRUD::Album::Form',
   init_form               => 'init_with_album',
-  init_object             => 'album_from_form,
+  init_object             => 'album_from_form',
   default_template        => 'album/edit.tt',  # you must create this!
   model_name              => 'Album',
   primary_key             => 'id',
@@ -392,11 +393,12 @@ and C<lib/MyApp/Controller/Song.pm> respectively.
  use strict;
  use warnings;
  use base qw( CatalystX::CRUD::Controller::RHTMLO );
+ use MyCRUD::Song::Form;
  
  __PACKAGE__->config(
   form_class              => 'MyCRUD::Song::Form',
   init_form               => 'init_with_song',
-  init_object             => 'song_from_form,
+  init_object             => 'song_from_form',
   default_template        => 'song/edit.tt',  # you must create this!
   model_name              => 'Song',
   primary_key             => 'id',

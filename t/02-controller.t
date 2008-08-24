@@ -1,4 +1,5 @@
 use Test::More tests => 7 ;
+use strict;
 
 use_ok('CatalystX::CRUD::Controller');
 ok(my $controller = CatalystX::CRUD::Controller->new, "new controller");

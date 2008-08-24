@@ -4,12 +4,15 @@ use warnings;
 use base qw( CatalystX::CRUD::Controller );
 use Carp;
 use Class::C3;
+use Data::Dump qw( dump );
 
-our $VERSION = '0.28';
+__PACKAGE__->mk_accessors(qw( enable_rpc_compat ));
+
+our $VERSION = '0.29';
 
 =head1 NAME
 
-CatalystX::CRUD::REST - REST-style controller for CRUD
+CatalystX::CRUD::REST - RESTful CRUD controller
 
 =head1 SYNOPSIS
 
@@ -17,6 +20,7 @@ CatalystX::CRUD::REST - REST-style controller for CRUD
     package MyApp::Controller::Foo;
     use strict;
     use base qw( CatalystX::CRUD::REST );
+    use MyForm::Foo;
     
     __PACKAGE__->config(
                     form_class              => 'MyForm::Foo',
@@ -27,6 +31,7 @@ CatalystX::CRUD::REST - REST-style controller for CRUD
                     primary_key             => 'id',
                     view_on_single_result   => 0,
                     page_size               => 50,
+                    enable_rpc_compat       => 0,
                     );
                     
     1;
@@ -56,6 +61,20 @@ The REST API is designed with identical configuration options as the RPC-style
 Controller API, so that you can simply change your @ISA chain and enable
 REST features for your application.
 
+B<IMPORTANT:> If you are using a CatalystX::CRUD::REST subclass
+in your application, it is important to add the following to your main
+MyApp.pm file, just after the setup() call:
+
+ __PACKAGE__->setup();
+ 
+ # add these 2 lines
+ use Class::C3;
+ Class::C3::initialize();
+
+This is required for Class::C3 to resolve the inheritance chain correctly,
+especially in the case where your app is subclassing more than one
+CatalystX::CRUD::Controller::* class.
+
 =cut
 
 =head1 METHODS
@@ -69,6 +88,8 @@ Acts just like edit() in base Controller class, but with a RESTful name.
 Acts just like create() in base Controller class, but with a RESTful name.
 
 =cut
+
+__PACKAGE__->config( enable_rpc_compat => 0 );
 
 sub create_form : Local {
     my ( $self, $c ) = @_;
@@ -89,12 +110,12 @@ Redirects to create_form().
 
 sub create : Local {
     my ( $self, $c ) = @_;
-    $c->res->redirect( $c->uri_for('create_form') );
+    $c->res->redirect( $c->uri_for( $self->action_for('create_form') ) );
 }
 
-=head2 default
+=head2 rest
 
-Attribute: Private
+Attribute: Path Args
 
 Calls the appropriate method based on the HTTP method name.
 
@@ -107,37 +128,148 @@ my %http_method_map = (
     'GET'    => 'view'
 );
 
-sub default : Path {
+my %rpc_methods
+    = map { $_ => 1 } qw( create read update delete edit save rm view );
+my %related_methods = map { $_ => 1 } qw( add remove );
+
+sub rest : Path Args {
     my ( $self, $c, @arg ) = @_;
 
+    my $method = $self->req_method($c);
+
+    if ( !exists $http_method_map{$method} ) {
+        $c->res->status(400);
+        $c->res->body("Bad HTTP request for method $method");
+        return;
+    }
+
+    $c->log->debug( "rest args : " . dump \@arg ) if $c->debug;
+
+    my $n = scalar @arg;
+    if ( $n <= 2 ) {
+        $self->_rest( $c, @arg );
+    }
+    elsif ( $n <= 4 ) {
+        $self->_rest_related( $c, @arg );
+    }
+    else {
+        $self->_set_status_404($c);
+        return;
+    }
+}
+
+=head2 default
+
+Attribute: Private
+
+Returns 404 status. In theory, this action is never reached,
+and if it is, will log an error. It exists only for debugging
+purposes.
+
+=cut
+
+sub default : Private {
+    my ( $self, $c, @arg ) = @_;
+    $c->log->error("default method reached");
+    $self->_set_status_404($c);
+}
+
+sub _set_status_404 {
+    my ( $self, $c ) = @_;
+    $c->res->status(404);
+    $c->res->body('Resource not found');
+}
+
+sub _rest_related {
+    my ( $self, $c, @arg ) = @_;
+    my ( $oid, $rel_name, $fval, $rpc ) = @arg;
+
+    $c->log->debug("rest_related OID: $oid") if $c->debug;
+
+    if ($rpc) {
+        if ( !$self->enable_rpc_compat or !exists $related_methods{$rpc} ) {
+            $self->_set_status_404($c);
+            return;
+        }
+    }
+
+    my $http_method = $self->req_method($c);
+
+    $self->related( $c, $rel_name, $fval );
+
+    my $rpc_method;
+    if ($rpc) {
+        $rpc_method = $rpc;
+    }
+    elsif ( $http_method eq 'POST' or $http_method eq 'PUT' ) {
+        $rpc_method = 'add';
+    }
+    elsif ( $http_method eq 'DELETE' ) {
+        $rpc_method = 'remove';
+    }
+    else {
+
+        # related() will screen for GET based on config
+        # but we do not allow that for REST
+        $c->res->status(400);
+        $c->res->body("Bad HTTP request for method $http_method");
+        return;
+    }
+
+    $self->_call_rpc_method_as_action( $c, $rpc_method, $oid );
+}
+
+sub _rest {
+    my ( $self, $c, @arg ) = @_;
+
+    # default oid to emptry string and not 0
+    # so we can test for length and
+    # still have a false value for fetch()
     my $oid = shift @arg || '';
-    my $rpc = shift @arg;    # RPC compat
-    $c->log->debug("default OID: $oid") if $c->debug;
+    my $rpc = shift @arg;
+
+    $c->log->debug("rest OID: $oid") if $c->debug;
+
+    if ($rpc) {
+        if ( !$self->enable_rpc_compat or !exists $rpc_methods{$rpc} ) {
+            $self->_set_status_404($c);
+            return;
+        }
+    }
 
     my $method = $self->req_method($c);
+
     if ( !length $oid && $method eq 'GET' ) {
         $c->action->name('list');
         $c->action->reverse( join( '/', $c->action->namespace, 'list' ) );
         return $self->list($c);
     }
 
-    # everything else requires fetch()
-    $self->fetch( $c, $oid );
-
     # what RPC-style method to call
-    my $to_call = defined($rpc) ? $rpc : $http_method_map{$method};
+    my $rpc_method = defined($rpc) ? $rpc : $http_method_map{$method};
 
     # backwards compat naming for RPC style
-    if ( $to_call =~ m/^(create|edit)$/ ) {
-        $to_call .= '_form';
+    if ( $rpc_method =~ m/^(create|edit)$/ ) {
+        $rpc_method .= '_form';
     }
-    $c->log->debug("$method -> $to_call") if $c->debug;
 
-    # so TT (others?) auto-template-deduction works just like RPC style
-    $c->action->name($to_call);
-    $c->action->reverse( join( '/', $c->action->namespace, $to_call ) );
+    $self->_call_rpc_method_as_action( $c, $rpc_method, $oid );
+}
 
-    return $self->can($to_call) ? $self->$to_call($c) : $self->view($c);
+sub _call_rpc_method_as_action {
+    my ( $self, $c, $rpc_method, $oid ) = @_;
+
+    $self->fetch( $c, $oid );
+
+    my $http_method = $self->req_method($c);
+
+    $c->log->debug("$http_method -> $rpc_method") if $c->debug;
+
+    # so View::TT (others?) auto-template-deduction works just like RPC style
+    $c->action->name($rpc_method);
+    $c->action->reverse( join( '/', $c->action->namespace, $rpc_method ) );
+
+    return $self->$rpc_method($c);
 }
 
 =head2 req_method( I<context> )
@@ -171,10 +303,7 @@ Overrides base method to disable chaining.
 
 =cut
 
-sub edit {
-    my ( $self, $c ) = @_;
-    return $self->next::method($c);
-}
+sub edit { shift->next::method(@_) }
 
 =head2 view( I<context> )
 
@@ -182,10 +311,7 @@ Overrides base method to disable chaining.
 
 =cut
 
-sub view {
-    my ( $self, $c ) = @_;
-    return $self->next::method($c);
-}
+sub view { shift->next::method(@_) }
 
 =head2 save( I<context> )
 
@@ -193,10 +319,7 @@ Overrides base method to disable chaining.
 
 =cut
 
-sub save {
-    my ( $self, $c ) = @_;
-    return $self->next::method($c);
-}
+sub save { shift->next::method(@_) }
 
 =head2 rm( I<context> )
 
@@ -204,10 +327,47 @@ Overrides base method to disable chaining.
 
 =cut
 
-sub rm {
-    my ( $self, $c ) = @_;
-    return $self->next::method($c);
-}
+sub rm { shift->next::method(@_) }
+
+=head2 remove( I<context> )
+
+Overrides base method to disable chaining.
+
+=cut
+
+sub remove { shift->next::method(@_) }
+
+=head2 add( I<context> )
+
+Overrides base method to disable chaining.
+
+=cut
+
+sub add { shift->next::method(@_) }
+
+=head2 delete( I<context> )
+
+Overrides base method to disable chaining.
+
+=cut
+
+sub delete { shift->next::method(@_) }
+
+=head2 read( I<context> )
+
+Overrides base method to disable chaining.
+
+=cut
+
+sub read { shift->next::method(@_) }
+
+=head2 update( I<context> )
+
+Overrides base method to disable chaining.
+
+=cut
+
+sub update { shift->next::method(@_) }
 
 =head2 postcommit( I<context>, I<object> )
 

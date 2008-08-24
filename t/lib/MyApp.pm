@@ -3,39 +3,49 @@ use Catalyst::Runtime '5.70';
 use Catalyst;
 use Carp;
 use Data::Dump qw( dump );
-use File::Temp;
 
-our $VERSION = '0.03';
+our $VERSION = '0.04';
 
 __PACKAGE__->setup();
+
+Class::C3::initialize();    # for REST
+
+my @temp_files;
+
+sub push_temp_files {
+    shift;
+    push( @temp_files, @_ );
+}
+
+END {
+    for my $f (@temp_files) {
+        warn "unlinking $f\n" if $ENV{CATALYST_DEBUG};
+        $f->remove;
+    }
+}
 
 sub foo : Local {
 
     my ( $self, $c, @arg ) = @_;
 
-    my $tempf = File::Temp->new;
-
-    # have to set inc_path() after we create our first file
-    # so that we know where the temp dir is.
-
     #carp "inc_path: " . dump $c->model('File')->inc_path;
 
-    my $file = $c->model('File')->new_object( file => $tempf->filename );
+    my $file
+        = $c->model('File')
+        ->new_object(
+        file => [ $c->model('File')->inc_path->[0], 'crud_temp_file' ] );
+
+    $self->push_temp_files($file);
 
     #carp dump $file;
 
     $file->content('hello world');
 
-    $file->create;
+    $file->create or croak "failed to create $file : $!";
 
     my $filename = $file->basename;
 
     #carp "filename = $filename";
-
-    # set inc_path now that we know dir
-    $c->model('File')->config->{inc_path} = [ $file->dir ];
-
-    #carp "inc_path: " . dump $c->model('File')->inc_path;
 
     $file = $c->model('File')->fetch( file => $filename );
 
@@ -49,11 +59,13 @@ sub foo : Local {
 
     $file->content('change the text');
 
-    #carp dump $file;
+    #carp $file;
 
     $file->update;
 
     $file = $c->model('File')->fetch( file => $filename );
+
+    #carp $file;
 
     $c->res->body("foo is a-ok");
 
@@ -62,12 +74,14 @@ sub foo : Local {
 sub autoload : Local {
     my ( $self, $c ) = @_;
 
-    my $tempf = File::Temp->new;
+    my $file = $c->model('File')->new_object(
+        file    => [ $c->model('File')->inc_path->[0], 'autoload_test' ],
+        content => 'test AUTOLOAD black magic'
+    );
 
-    # have to set inc_path() after we create our first file
-    # so that we know where the temp dir is.
+    $self->push_temp_files($file);
 
-    my $file = $c->model('File')->new_object( file => $tempf->filename );
+    $file->create;
 
     #warn "testing basename on $file";
 

@@ -2,9 +2,9 @@ package CatalystX::CRUD;
 
 use warnings;
 use strict;
-use Catalyst::Exception;
+use Carp;
 
-our $VERSION = '0.28';
+our $VERSION = '0.29';
 
 =head1 NAME
 
@@ -44,7 +44,8 @@ sub has_errors {
 
 =head2 throw_error( I<msg> )
 
-Throws Catalyst::Exception. Override to manage errors in some other way.
+Throws exception using Carp::croak (confess() if CATALYST_DEBUG env var
+is set). Override to manage errors in some other way.
 
 NOTE that if in your subclass throw_error() is not fatal and instead
 returns a false a value, methods that call it will, be default, continue
@@ -55,7 +56,7 @@ processing instead of returning. See fetch() for an example.
 sub throw_error {
     my $self = shift;
     my $msg = shift || 'unknown error';
-    Carp::confess($msg);
+    $ENV{CATALYST_DEBUG} ? Carp::confess($msg) : Carp::croak($msg);
 }
 
 =head1 AUTHOR

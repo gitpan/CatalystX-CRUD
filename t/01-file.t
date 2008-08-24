@@ -1,4 +1,5 @@
-use Test::More tests => 24;
+use Test::More tests => 35;
+use strict;
 use lib qw( lib t/lib );
 use_ok('CatalystX::CRUD::Model::File');
 use_ok('CatalystX::CRUD::Object::File');
@@ -8,7 +9,7 @@ use Data::Dump qw( dump );
 use HTTP::Request::Common;
 
 ###########################################
-# set up the test env and config
+# basic sanity check
 ok( get('/foo'), "get /foo" );
 
 ok( my $response = request('/file/search'), "response for /file/search" );
@@ -36,6 +37,8 @@ is( $res->content,
     "POST new file response"
 );
 
+is( $res->headers->{status}, 302, "new file 302 redirect status" );
+
 # read the file we just created
 ok( $res = request( HTTP::Request->new( GET => '/file/testfile/view' ) ),
     "GET new file" );
@@ -53,9 +56,47 @@ ok( $res = request(
 
 like( $res->content, qr/content => "foo bar baz"/, "update file" );
 
+# test for default()
+ok( $res = request('/file/testfile'), "get /file/testfile" );
+
+is( $res->headers->{status}, 404, "default is 404" );
+
+# create related file
+ok( $res = request(
+        POST( '/file/otherdir%2ftestfile2/save', [ content => 'hello world 2' ] )
+    ),
+    "POST new file2"
+);
+
+is( $res->content,
+    '{ content => "hello world 2", file => "otherdir/testfile2" }',
+    "POST new file2 response"
+);
+
+is( $res->headers->{status}, 302, "new file 302 redirect status" );
+
+# create relationship
+ok( $res = request( POST( '/file/testfile/dir/otherdir%2ftestfile2/add', [] ) ),
+    "add related dir/otherdir%2ftestfile2" );
+
+#dump $res;
+
+is( $res->headers->{status}, 204, "relationship created with status 204" );
+
+# remove the relationship
+
+ok( $res = request( POST( '/file/testfile/dir/otherdir%2ftestfile2/remove', [] ) ),
+    "remove related dir/testfile2" );
+
+is( $res->headers->{status}, 204, "relationship removed with status 204" );
+
 # delete the file
 
-ok( $res = request( POST( '/file/testfile/rm', [] ) ), "rm file" );
+ok( $res = request( POST( '/file/testfile/delete', [] ) ), "rm file" );
+
+# delete the file2
+
+ok( $res = request( POST( '/file/testfile2/delete', [] ) ), "rm file2" );
 
 #diag( $res->content );
 

@@ -9,9 +9,11 @@ use base qw(
 use Carp;
 use Class::C3;
 
-our $VERSION = '0.28';
+our $VERSION = '0.29';
 
-__PACKAGE__->mk_accessors(qw( object_class ));
+__PACKAGE__->mk_accessors(qw( object_class page_size ));
+
+__PACKAGE__->config( page_size => 50 );
 
 =head1 NAME
 
@@ -28,11 +30,14 @@ CatalystX::CRUD::Model - base class for CRUD models
                     );
                      
  # must define the following methods
- sub new_object { }
- sub fetch      { }
- sub search     { }
- sub iterator   { }
- sub count      { }
+ sub new_object         { }
+ sub fetch              { }
+ sub search             { }
+ sub iterator           { }
+ sub count              { }
+ sub search_related     { }
+ sub iterator_related   { }
+ sub count_related      { }
  
  1;
  
@@ -101,18 +106,17 @@ has already been merged by the time Xsetup() is called.
 
 sub Xsetup {
     my ( $self, $c, $arg ) = @_;
-    if ( exists $self->config->{object_class} ) {
-        my $object_class = $self->config->{object_class};
-        eval "require $object_class";
-        if ($@) {
-            $self->throw_error("$object_class could not be loaded: $@");
-        }
-        $self->object_class($object_class);
 
+    if ( !$self->object_class ) {
+        croak "must configure an object_class";
     }
-    if ( !defined $self->config->{page_size} ) {
-        $self->config->{page_size} = 50;
+
+    my $object_class = $self->object_class;
+    eval "require $object_class";
+    if ($@) {
+        $self->throw_error("$object_class could not be loaded: $@");
     }
+
     return $self;
 }
 
@@ -121,8 +125,6 @@ sub Xsetup {
 Returns the C<page_size> set in config().
 
 =cut
-
-sub page_size { shift->config->{page_size} }
 
 =head2 new_object
 
@@ -136,21 +138,37 @@ CXCM subclasses need to implement at least the following methods:
 
 =over
 
-=item fetch
+=item fetch( I<args> )
 
-Returns CatalystX::CRUD::Object->new()->read()
+Should return the equivalent of 
+CatalystX::CRUD::Object->new( I<args> )->read().
 
-=item search
+=item search( I<query> )
 
 Returns zero or more CXCO instances as an array or arrayref.
+I<query> may be the return value of make_query().
 
-=item iterator
+=item iterator( I<query> )
 
-Like search() but returns an iterator conforming to the CatalystX::CRUD::Iterator API.
+Like search() but returns an iterator conforming to the 
+CatalystX::CRUD::Iterator API.
 
-=item count
+=item count( I<query> )
 
 Like search() but returns an integer.
+
+=item search_related( I<obj>, I<relationship> )
+
+Returns zero or more CXCO instances like search().
+The instances are related to I<obj> via I<relationship>.
+
+=item iterator_related( I<obj>, I<relationship> )
+
+Like search_related() but returns an iterator.
+
+=item count_related( I<obj>, I<relationship> )
+
+Like search_related() but returns an integer.
 
 =back
 
@@ -166,10 +184,13 @@ sub new_object {
     }
 }
 
-sub fetch    { shift->throw_error("must implement fetch") }
-sub search   { shift->throw_error("must implement search") }
-sub iterator { shift->throw_error("must implement iterator") }
-sub count    { shift->throw_error("must implement count") }
+sub fetch            { shift->throw_error("must implement fetch") }
+sub search           { shift->throw_error("must implement search") }
+sub iterator         { shift->throw_error("must implement iterator") }
+sub count            { shift->throw_error("must implement count") }
+sub search_related   { shift->throw_error("must implement search_related") }
+sub iterator_related { shift->throw_error("must implement iterator_related") }
+sub count_related    { shift->throw_error("must implement count_related") }
 
 =head1 OPTIONAL METHODS
 
@@ -221,11 +242,43 @@ count(). Example of use:
                                           # $c->model('Foo')->make_query()
 
 
+=item add_related( I<obj>, I<rel_name>, I<foreign_value> )
+
+Associate foreign object identified by I<foreign_value> with I<obj>
+via the relationship I<rel_name>.
+
+It is up to the subclass to implement this method.
+
+=item rm_related( I<obj>, I<rel_name>, I<foreign_value> )
+
+Dissociate foreign object identified by I<foreign_value> from I<obj>
+via the relationship I<rel_name>.
+
+It is up to the subclass to implement this method.
+
+=item remove_related
+
+remove_related() is an alias for rm_related().
+
+=item has_relationship( I<obj>, I<rel_name> )
+
+Should return true or false as to whether I<rel_name> exists for
+I<obj>.
+
+It is up to the subclass to implement this method.
+
 =back
 
 =cut
 
-sub make_query { shift->throw_error("must implement make_query()") }
+sub make_query  { shift->throw_error("must implement make_query()") }
+sub add_related { shift->throw_error("must implement add_related()") }
+sub rm_related  { shift->throw_error("must implement rm_related()") }
+*remove_related = \&rm_related;
+
+sub has_relationship {
+    shift->throw_error("must implement has_relationship()");
+}
 
 1;
 

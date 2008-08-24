@@ -26,6 +26,9 @@ CatalystX::CRUD::ModelAdapter - make CRUD Controllers work with non-CRUD models
  sub iterator   { }
  sub count      { }
  sub make_query { }
+ sub search_related     { }
+ sub iterator_related   { }
+ sub count_related      { }
  
  1;
  
@@ -109,7 +112,7 @@ of the Model you are adapting, based on I<args>.
 
 sub count { shift->throw_error("must implement count") }
 
-=head2 make_query( I<context>, I<controller> )
+=head2 make_query( I<controller>, I<context> )
 
 Should return appropriate values for passing to search(), iterator() and
 count(). See CataystX::CRUD::Model for examples.
@@ -117,6 +120,56 @@ count(). See CataystX::CRUD::Model for examples.
 =cut
 
 sub make_query { shift->throw_error("must implement make_query()") }
+
+=head2 search_related( I<controller>, I<context>, I<obj>, I<relationship> )
+
+Returns zero or more CXCO instances like search().
+The instances are related to I<obj> via I<relationship>.
+
+=head2 iterator_related( I<controller>, I<context>, I<obj>, I<relationship> )
+
+Like search_related() but returns an iterator.
+
+=head2 count_related( I<controller>, I<context>, I<obj>, I<relationship> )
+
+Like search_related() but returns an integer.
+
+=cut
+
+sub search_related   { shift->throw_error("must implement search_related") }
+sub iterator_related { shift->throw_error("must implement iterator_related") }
+sub count_related    { shift->throw_error("must implement count_related") }
+
+=head2 add_related( I<controller>, I<context>, I<obj>, I<rel_name>, I<foreign_value> )
+
+Associate foreign object identified by I<foreign_value> with I<obj>
+via the relationship I<rel_name>.
+
+It is up to the subclass to implement this method.
+
+=head2 rm_related( I<controller>, I<context>, I<obj>, I<rel_name>, I<foreign_value> )
+
+Dissociate foreign object identified by I<foreign_value> from I<obj>
+via the relationship I<rel_name>.
+
+It is up to the subclass to implement this method.
+
+=head2 has_relationship( I<controller>, I<context>, I<obj>, I<rel_name> )
+
+Should return true or false as to whether I<rel_name> exists for
+I<obj>.
+
+It is up to the subclass to implement this method.
+
+
+=cut
+
+sub add_related { shift->throw_error("must implement add_related()") }
+sub rm_related  { shift->throw_error("must implement rm_related()") }
+
+sub has_relationship {
+    shift->throw_error("must implement has_relationship()");
+}
 
 =head1 CRUD Methods
 

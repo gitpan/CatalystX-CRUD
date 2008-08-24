@@ -9,6 +9,7 @@ use Carp;
 use Catalyst::Utils;
 use CatalystX::CRUD::Results;
 use Class::C3;
+use Data::Dump qw( dump );
 
 __PACKAGE__->mk_accessors(
     qw(
@@ -34,7 +35,7 @@ __PACKAGE__->config(
     naked_results         => 0,
 );
 
-our $VERSION = '0.28';
+our $VERSION = '0.29';
 
 =head1 NAME
 
@@ -105,6 +106,7 @@ Calls the form() method and saves the return value in stash() as C<form>.
 sub auto : Private {
     my ( $self, $c, @args ) = @_;
     $c->stash->{form} = $self->form($c);
+    $self->next::method( $c, @args ) if $self->next::can;
     1;
 }
 
@@ -112,14 +114,14 @@ sub auto : Private {
 
 Attribute: Private
 
-The fallback method. The default is simply to write a warning to the Catalyst
-log() method.
+The fallback method. The default returns a 404 error.
 
 =cut
 
 sub default : Private {
     my ( $self, $c, @args ) = @_;
-    $c->log->warn("no action defined for the default() CRUD method");
+    $c->res->body('Not found');
+    $c->res->status(404);
 }
 
 =head2 fetch( I<primary_key> )
@@ -138,9 +140,9 @@ The I<primary_key> value is saved in stash() as C<object_id>.
 sub fetch : Chained('/') PathPrefix CaptureArgs(1) {
     my ( $self, $c, $id ) = @_;
     $c->stash->{object_id} = $id;
-    $c->log->debug("fetch $id") if $c->debug;
     my @pk = $self->get_primary_key( $c, $id );
     my @arg = $id ? (@pk) : ();
+    $c->log->debug( "fetch: " . dump \@arg ) if $c->debug;
     $c->stash->{object} = $self->do_model( $c, 'fetch', @arg );
     if ( $self->has_errors($c) or !$c->stash->{object} ) {
         $self->throw_error( 'No such ' . $self->model_name );
@@ -179,7 +181,7 @@ See make_primary_key_string().
 
 sub get_primary_key {
     my ( $self, $c, $id ) = @_;
-    return () unless defined $id;
+    return () unless defined $id and length $id;
     my $pk = $self->primary_key;
     my @ret;
     if ( ref $pk ) {
@@ -193,10 +195,11 @@ sub get_primary_key {
         }
     }
     else {
-        @ret
-            = ( $pk => exists $c->req->params->{$pk}
+        @ret = (
+              $pk => exists $c->req->params->{$pk}
             ? $c->req->params->{$pk}
-            : $id );
+            : $id
+        );
     }
     return @ret;
 }
@@ -212,7 +215,7 @@ the value of:
 but could be any object that has accessor methods with
 the same names as the field(s) specified by B<primary_key>.
 
-Multiple values are joined with C<;;> and any C<;> characters
+Multiple values are joined with C<;;> and any C<;> or C</> characters
 in the column values are URI-escaped.
 
 =cut
@@ -234,6 +237,11 @@ sub make_primary_key_string {
     else {
         $id = $obj->$pk;
     }
+
+    # must escape any / in $id since passing it to uri_for as-is
+    # will break.
+    $id =~ s!/!\%2f!g;
+
     return $id;
 }
 
@@ -243,6 +251,9 @@ Attribute: Local
 
 Namespace for creating a new object. Calls to fetch() and edit()
 with a B<primary_key> value of C<0> (zero).
+
+B<NOTE:> This is a GET method named for consistency with the C
+in CRUD. It is not equivalent to a POST in REST terminology.
 
 =cut
 
@@ -299,6 +310,17 @@ sub view : PathPart Chained('fetch') Args(0) {
     $c->stash->{form}->$meth( $c->stash->{object} );
 }
 
+=head2 read
+
+Alias for view(), just for consistency with the R in CRUD.
+
+=cut
+
+sub read : PathPart Chained('fetch') Args(0) {
+    my ( $self, $c ) = @_;
+    $self->view($c);
+}
+
 =head2 save
 
 Attribute: chained to fetch(), expecting no arguments.
@@ -321,7 +343,8 @@ sub save : PathPart Chained('fetch') Args(0) {
 
     if ( !$self->allow_GET_writes ) {
         if ( $c->req->method ne 'POST' ) {
-            $self->throw_error('GET request not allowed');
+            $c->res->status(400);
+            $c->res->body('GET request not allowed');
             return;
         }
     }
@@ -356,6 +379,17 @@ sub save : PathPart Chained('fetch') Args(0) {
     1;
 }
 
+=head2 update
+
+Alias for save(), just for consistency with the U in CRUD.
+
+=cut
+
+sub update : PathPart Chained('fetch') Args(0) {
+    my ( $self, $c ) = @_;
+    $self->save($c);
+}
+
 =head2 rm
 
 Attribute: chained to fetch(), expecting no arguments.
@@ -370,7 +404,8 @@ sub rm : PathPart Chained('fetch') Args(0) {
     my ( $self, $c ) = @_;
     if ( !$self->allow_GET_writes ) {
         if ( $c->req->method ne 'POST' ) {
-            $self->throw_error('GET request not allowed');
+            $c->res->status(400);
+            $c->res->body('GET request not allowed');
             return;
         }
     }
@@ -392,6 +427,17 @@ sub rm : PathPart Chained('fetch') Args(0) {
         $o->delete;
     }
     $self->postcommit( $c, $o );
+}
+
+=head2 delete
+
+Wrapper for rm(), just for consistency with the D in CRUD.
+
+=cut
+
+sub delete : PathPart Chained('fetch') Args(0) {
+    my ( $self, $c ) = @_;
+    $self->rm($c);
 }
 
 =head2 list
@@ -452,6 +498,102 @@ sub count : Local {
     $c->stash->{fetch_no_results} = 1;
 
     $self->do_search( $c, @arg );
+}
+
+=head2 related( I<rel_name>, I<foreign_pk_value> )
+
+Attribute: chained to fetch(), expecting two arguments.
+
+Similar to fetch(), a chain base method for add_related()
+and rm_related(). Expects two arguments: I<rel_name>
+and I<foreign_pk_value>. Those two values are put in
+stash under those key names.
+
+Note that related() has a PathPart of '' so it does
+not appear in your URL:
+
+ http://yourhost/foo/123/bars/456/add
+
+will resolve in the action_for add().
+
+=cut
+
+sub related : PathPart('') Chained('fetch') CaptureArgs(2) {
+    my ( $self, $c, $rel, $fpk_value ) = @_;
+    return if $self->has_errors($c);
+    unless ( $self->can_write($c) ) {
+        $self->throw_error('Permission denied');
+        return;
+    }
+    if ( !$self->allow_GET_writes ) {
+        if ( uc( $c->req->method ) ne 'POST' ) {
+            $c->res->status(400);
+            $c->res->body('GET request not allowed');
+            $c->stash->{error} = 1; # so has_errors() will return true
+            return;
+        }
+    }
+    $c->stash( rel_name         => $rel );
+    $c->stash( foreign_pk_value => $fpk_value );
+}
+
+=head2 remove
+
+Attribute: chained to related().
+
+Dissociate a related many-to-many object of
+relationship name I<rel_name> with primary key value I<foreign_pk_value>.
+
+Example:
+
+ http://yoururl/user/123/group/456/remove
+
+will remove user C<123> from the group C<456>.
+
+Sets the 204 (enacted, no content) HTTP response status
+on success.
+
+=cut
+
+sub remove : PathPart Chained('related') Args(0) {
+    my ( $self, $c ) = @_;
+    return if $self->has_errors($c);
+    $self->do_model(
+        $c, 'rm_related', $c->stash->{object},
+        $c->stash->{rel_name},
+        $c->stash->{foreign_pk_value}
+    );
+    $c->res->status(204);    # enacted, no content
+}
+
+=head2 add
+
+Attribute: chained to related().
+
+Associate the primary object retrieved in fetch() with
+the object with I<foreign_pk_value>
+via a related many-to-many relationship I<rel_name>.
+
+Example:
+
+ http://yoururl/user/123/group/456/add
+
+will add user C<123> to the group C<456>.
+
+Sets the 204 (enacted, no content) HTTP response status
+on success.
+
+=cut
+
+sub add : PathPart Chained('related') Args(0) {
+    my ( $self, $c ) = @_;
+    return if $self->has_errors($c);
+    $self->do_model(
+        $c, 'add_related', $c->stash->{object},
+        $c->stash->{rel_name},
+        $c->stash->{foreign_pk_value}
+    );
+    $c->res->status(204);    # enacted, no content
 }
 
 =head1 INTERNAL METHODS
@@ -661,8 +803,12 @@ action in the same class as the current action.
 sub view_on_single_result {
     my ( $self, $c, $results ) = @_;
     return 0 unless $self->config->{view_on_single_result};
+
+    # TODO require $results be a CatalystX::CRUD::Results object
+    # so we can call next() instead of assuming array ref.
     my $obj = $results->[0];
-    my $id  = $self->make_primary_key_string($obj);
+
+    my $id = $self->make_primary_key_string($obj);
 
     # the append . '' is to force stringify anything
     # that might be an object with overloading. Otherwise
