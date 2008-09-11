@@ -7,8 +7,11 @@ use Class::C3;
 use Data::Dump qw( dump );
 
 __PACKAGE__->mk_accessors(qw( enable_rpc_compat ));
+__PACKAGE__->config( enable_rpc_compat => 0 );
 
-our $VERSION = '0.29';
+our $VERSION = '0.30';
+
+#warn "REST VERSION = $VERSION";
 
 =head1 NAME
 
@@ -89,12 +92,9 @@ Acts just like create() in base Controller class, but with a RESTful name.
 
 =cut
 
-__PACKAGE__->config( enable_rpc_compat => 0 );
-
-sub create_form : Local {
+sub create_form : Path('create_form') {
     my ( $self, $c ) = @_;
-    $self->fetch( $c, 0 );
-    $self->edit($c);
+    $self->create($c);
 }
 
 sub edit_form : PathPart Chained('fetch') Args(0) {
@@ -108,9 +108,15 @@ Redirects to create_form().
 
 =cut
 
-sub create : Local {
+# no-op to undo the superclass Local attr
+sub create {
+    shift->next::method(@_);
+}
+
+sub _rest_create : Path('create') {
     my ( $self, $c ) = @_;
-    $c->res->redirect( $c->uri_for( $self->action_for('create_form') ) );
+    $c->res->redirect(
+        $c->uri_for( $self->action_for('create_form'), $c->req->params ) );
 }
 
 =head2 rest
@@ -132,7 +138,7 @@ my %rpc_methods
     = map { $_ => 1 } qw( create read update delete edit save rm view );
 my %related_methods = map { $_ => 1 } qw( add remove );
 
-sub rest : Path Args {
+sub rest : Path {
     my ( $self, $c, @arg ) = @_;
 
     my $method = $self->req_method($c);
@@ -240,6 +246,7 @@ sub _rest {
     my $method = $self->req_method($c);
 
     if ( !length $oid && $method eq 'GET' ) {
+        $c->log->debug("GET request with no OID") if $c->debug;
         $c->action->name('list');
         $c->action->reverse( join( '/', $c->action->namespace, 'list' ) );
         return $self->list($c);
@@ -379,14 +386,30 @@ sub postcommit {
     my ( $self, $c, $o ) = @_;
     my $id = $self->make_primary_key_string($o);
 
-    if ( $c->action->name eq 'rm' ) {
-        $c->response->redirect( $c->uri_for('') );
-    }
-    else {
-        $c->response->redirect( $c->uri_for( '', $id ) );
+    unless ( defined $c->res->location and length $c->res->location ) {
+
+        if ( $c->action->name eq 'rm' ) {
+            $c->response->redirect( $c->uri_for('') );
+        }
+        else {
+            $c->response->redirect( $c->uri_for( '', $id ) );
+        }
+
     }
 
-    1;
+    $self->next::method( $c, $o );
+}
+
+=head2 new
+
+Overrides base method just to call next::method to ensure
+config() gets merged correctly.
+
+=cut
+
+sub new {
+    my ( $class, $app_class, $args ) = @_;
+    return $class->next::method( $app_class, $args );
 }
 
 1;

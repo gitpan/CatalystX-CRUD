@@ -6,10 +6,9 @@ use base qw(
     Catalyst::Component::ACCEPT_CONTEXT
     Catalyst::Model
 );
-use Carp;
 use Class::C3;
 
-our $VERSION = '0.29';
+our $VERSION = '0.30';
 
 __PACKAGE__->mk_accessors(qw( object_class page_size ));
 
@@ -108,7 +107,7 @@ sub Xsetup {
     my ( $self, $c, $arg ) = @_;
 
     if ( !$self->object_class ) {
-        croak "must configure an object_class";
+        $self->throw_error("must configure an object_class");
     }
 
     my $object_class = $self->object_class;

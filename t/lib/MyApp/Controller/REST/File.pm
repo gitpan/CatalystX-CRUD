@@ -20,30 +20,15 @@ __PACKAGE__->config(
     init_object => 'file_from_form',
 );
 
-# test the view_on_single_result method
-# search for a file where we know there is only one
-# and then check for a redirect response code
-
-# TODO real search
-
 sub do_search {
-
     my ( $self, $c, @arg ) = @_;
+    $self->next::method( $c, @arg );
 
-    $self->config->{view_on_single_result} = 1;
+    #carp dump $c->stash->{results};
 
-    my $tmpf = File::Temp->new;
-
-    my $file = $c->model( $self->model_name )
-        ->new_object( file => $tmpf->filename );
-
-    if ( my $uri = $self->view_on_single_result( $c, [$file] ) ) {
-        $c->response->redirect($uri);
-        return;
+    for my $file ( @{ $c->stash->{results}->{results} } ) {
+        $file->read;
     }
-
-    $self->throw_error("view_on_single_result failed");
-
 }
 
 sub end : Private {

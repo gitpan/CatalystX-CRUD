@@ -4,9 +4,12 @@ use warnings;
 use base qw( CatalystX::CRUD Class::Accessor::Fast );
 use Sort::SQL;
 use Data::Pageset;
+use Search::QueryParser::SQL;
+use Carp;
+
 __PACKAGE__->mk_accessors(qw( use_ilike ne_sign ));
 
-our $VERSION = '0.29';
+our $VERSION = '0.30';
 
 =head1 NAME
 
@@ -52,50 +55,63 @@ might be all date/timestamp columns.
 
 Returns a hashref suitable for passing to a SQL-oriented model.
 
-I<field_names> should be an array of valid form field names.
+I<field_names> should be an array of valid column names.
 If false or missing, will call $c->controller->field_names().
 
 The following reserved request param names are implemented:
 
 =over
 
-=item _order
+=item cxc-order
 
 Sort order. Should be a SQL-friendly string parse-able by Sort::SQL.
 
-=item _sort
+=item cxc-sort
 
-Instead of _order, can pass one column name to sort by.
+Instead of cxc-order, can pass one column name to sort by.
 
-=item _dir
+=item cxc-dir
 
-With _sort, pass the direction in which to sort.
+With cxc-sort, pass the direction in which to sort.
 
-=item _page_size
+=item cxc-page_size
 
-For the Data::Pageset pager object. Defaults to page_size(). An upper limit of 200
-is implemented by default to reduce the risk of a user [unwittingly] creating a denial
+For the Data::Pageset pager object. 
+Defaults to page_size(). An upper limit of 200
+is implemented by default to reduce the risk of 
+a user [unwittingly] creating a denial
 of service situation.
 
-=item _page
+=item cxc-page
 
 What page the current request is coming from. Used to set the offset value
 in the query. Defaults to C<1>.
 
-=item _offset
+=item cxc-offset
 
 Pass explicit row to offset from in query. If not present, deduced from
-_page and _page_size.
+cxc-page and cxc-page_size.
 
-=item _no_page
+=item cxc-no_page
 
-Ignore _page_size, _page and _offset and do not return a limit
+Ignore cxc-page_size, cxc-page and cxc-offset and do not return a limit
 or offset value.
 
-=item _op
+=item cxc-op
 
 If set to C<OR> then the query columns will be marked as OR'd together,
 rather than AND'd together (the default).
+
+=item cxc-query
+
+The query string to use. This overrides any param values set for
+field names.
+
+=item cxc-query-fields
+
+Which field names to set as 'default_column' in the Search::QueryParser::SQL
+parser object. The default is all I<field_names>. B<NOTE> this param is only
+checked if C<cxc-query> has a value.
 
 =back
 
@@ -104,33 +120,53 @@ rather than AND'd together (the default).
 sub _which_sort {
     my ( $self, $c ) = @_;
     my $params = $c->req->params;
-    return $params->{'_order'} if defined $params->{'_order'};
-    return join( ' ', $params->{'_sort'}, $params->{'_dir'} )
-        if defined( $params->{'_sort'} ) && defined( $params->{'_dir'} );
-    my %pks = $c->controller->get_primary_key($c);
-    return join( ' ', map { $_ . ' DESC' } keys %pks );
+
+    # backwards compat
+    for my $p (qw( cxc-order _order )) {
+        return $params->{$p} if defined $params->{$p};
+    }
+
+    for my $p (qw( cxc-sort _sort )) {
+        my $dir = $params->{'cxc-dir'}
+            || $params->{'_dir'};
+        return join( ' ', $params->{$p}, uc($dir) )
+            if defined( $params->{$p} ) && defined($dir);
+    }
+
+    my $pks = $c->controller->primary_key;
+    return join( ' ', map { $_ . ' DESC' } ref $pks ? @$pks : ($pks) );
 }
 
 sub make_sql_query {
     my $self        = shift;
     my $c           = $self->context;
     my $field_names = shift
+        || $c->req->params->{'cxc-query-fields'}
         || $c->controller->field_names($c)
         || $self->throw_error("field_names required");
+
+    # if present, param overrides default of form->field_names
+    # passed by base controller.
+    if (   exists $c->req->params->{'cxc-query-fields'}
+        && exists $c->req->params->{'cxc-query'} )
+    {
+        $field_names = $c->req->params->{'cxc-query-fields'};
+    }
 
     my $p2q       = $self->params_to_sql_query($field_names);
     my $params    = $c->req->params;
     my $sp        = Sort::SQL->string2array( $self->_which_sort($c) );
-    my $s         = join( ' ', map { each %$_ } @$sp );
-    my $offset    = $params->{'_offset'};
-    my $page_size = $params->{'_page_size'}
+    my $s         = join( ' ', map {%$_} @$sp );
+    my $offset    = $params->{'cxc-offset'} || $params->{'_offset'};
+    my $page_size = $params->{'cxc-page_size'}
+        || $params->{'_page_size'}
         || $c->controller->page_size
         || $self->page_size;
 
     # don't let users DoS us. unless they ask to (see _no_page).
     $page_size = 200 if $page_size > 200;
 
-    my $page = $params->{'_page'} || 1;
+    my $page = $params->{'cxc-page'} || $params->{'_page'} || 1;
 
     if ( !defined($offset) ) {
         $offset = ( $page - 1 ) * $page_size;
@@ -145,12 +181,17 @@ sub make_sql_query {
         limit           => $page_size,
         offset          => $offset,
         sort_order      => $sp,
-        plain_query     => $p2q->{query},
-        plain_query_str => $self->sql_query_as_string( $p2q->{query} ),
+        plain_query     => $p2q->{query_hash},
+        plain_query_str => (
+              $p2q->{query}
+            ? $p2q->{query}->stringify
+            : ''
+        ),
+        query_obj => $p2q->{query},
     );
 
     # undo what we've done if asked.
-    if ( $params->{'_no_page'} ) {
+    if ( $params->{'cxc-no_page'} ) {
         delete $query{limit};
         delete $query{offset};
     }
@@ -159,30 +200,12 @@ sub make_sql_query {
 
 }
 
-=head2 sql_query_as_string( params_to_sql_query->{query} )
-
-Returns the request params as a SQL WHERE string.
-
-=cut
-
-sub sql_query_as_string {
-    my ( $self, $q ) = @_;
-    my @s;
-    for my $p ( sort keys %$q ) {
-        my @v = @{ $q->{$p} };
-        next unless grep {m/\S/} @v;
-        push( @s, "$p = " . join( ' or ', @v ) );
-    }
-    my $op = $self->context->req->params->{_op} || 'AND';
-    return join( " $op ", @s );
-}
-
 =head2 params_to_sql_query( I<field_names> )
 
 Convert request->params into a SQL-oriented
 query.
 
-Returns a hashref with two key/value pairs:
+Returns a hashref with three key/value pairs:
 
 =over
 
@@ -190,9 +213,14 @@ Returns a hashref with two key/value pairs:
 
 Arrayref of ORM-friendly SQL constructs.
 
-=item query
+=item query_hash
 
 Hashref of column_name => raw_values_as_arrayref.
+
+=item query
+
+The Search::QueryParser::SQL::Query object used
+to generate C<sql>.
 
 =back
 
@@ -202,57 +230,116 @@ Called internally by make_sql_query().
 
 sub params_to_sql_query {
     my ( $self, $field_names ) = @_;
+    croak "field_names ARRAY ref required"
+        unless defined $field_names
+            and ref($field_names) eq 'ARRAY';
     my $c = $self->context;
-    my ( @sql, %query );
+    my ( @sql, %pq );
     my $ne = $self->ne_sign || '!=';
     my $like = $self->use_ilike ? 'ilike' : 'like';
     my $treat_like_int
         = $self->can('treat_like_int') ? $self->treat_like_int : {};
-    my $ORify
-        = ( exists $c->req->params->{_op} && $c->req->params->{_op} eq 'OR' )
-        ? 1
-        : 0;
-    my $fuzzy = $c->req->params->{_fuzzy} || 0;
+    my $params = $c->req->params;
+    my $oper   = $params->{'cxc-op'} || $params->{'_op'} || 'AND';
+    my $fuzzy  = $params->{'cxc-fuzzy'} || $params->{'_fuzzy'} || 0;
 
-    for my $p (@$field_names) {
+    my %columns;
+    for my $fn (@$field_names) {
+        $columns{$fn} = exists $treat_like_int->{$fn} ? 'int' : 'char';
+    }
 
-        next unless exists $c->req->params->{$p};
-        my @v = $c->req->param($p);
-        next unless grep { defined && m/./ } @v;
-        my @copy = @v;
-        $query{$p} = \@v;
-        if ($fuzzy) {
-            grep { $_ .= '%' unless m/[\%\*]/ } @copy;
+    my ( @param_query, @default_columns );
+
+    # if cxc-query is present, prefer that.
+    # otherwise, any params matching those in $field_names
+    # are each parsed as individual queries, serialized and joined
+    # with $oper.
+    # cxc-query should be free from sql-injection attack as
+    # long as Models use 'sql' or 'query'->dbi in returned hashref
+    if ( exists $params->{'cxc-query'} ) {
+        my $q
+            = ref $params->{'cxc-query'}
+            ? $params->{'cxc-query'}->[0]
+            : $params->{'cxc-query'};
+
+        if ( exists $params->{'cxc-query-fields'} ) {
+            @default_columns
+                = ref $params->{'cxc-query-fields'}
+                ? @{ $params->{'cxc-query-fields'} }
+                : ( $params->{'cxc-query-fields'} );
+
         }
 
-        # normalize wildcards and set sql
-        if ( grep {/[\%\*]|^!/} @copy ) {
-            grep {s/\*/\%/g} @copy;
-            my @wild = grep {m/\%/} @copy;
-            if (@wild) {
-                if ( exists $treat_like_int->{$p} ) {
-                    push( @sql,
-                        ( $p => { 'ge' => [ map {m/^(.+?)\%/} @wild ] } ) );
-                }
-                else {
-                    push( @sql, ( $p => { $like => \@wild } ) );
-                }
-            }
+        @param_query = ($q);
+        $pq{'cxc-query'} = \@param_query;
 
-            # allow for negation of query
-            my @not = grep {m/^!/} @copy;
-            if (@not) {
-                push( @sql, ( $p => { $ne => [ grep {s/^!//} @not ] } ) );
-            }
-        }
-        else {
-            push( @sql, $p => [@copy] );
+    }
+    else {
+        for (@$field_names) {
+            next unless exists $params->{$_};
+            my @v
+                = ref $params->{$_} ? @{ $params->{$_} } : ( $params->{$_} );
+
+            grep {s/\+/ /g} @v;    # TODO URI + for space -- is this right?
+
+            $pq{$_} = \@v;
+
+            next unless grep {m/\S/} @v;
+
+            # we don't want to "double encode" $like because it will
+            # be re-parsed as a word not an op, so we have our a modified
+            # parser for per-field queries.
+            my $parser = Search::QueryParser::SQL->new(
+                like    => '=',
+                fuzzify => $fuzzy,
+                columns => \%columns,
+                strict  => 1,
+            );
+
+            my $query;
+            eval {
+                $query = $parser->parse( "$_ = (" . join( ' ', @v ) . ')' );
+            };
+            return $self->throw_error($@) if $@;
+
+            push @param_query, $query->stringify;
         }
     }
 
+    #Carp::carp Data::Dump::dump \@param_query;
+
+    my $joined_query = join( ' ', @param_query );
+    my $sql          = [];
+    my $query        = '';
+
+    if ( length $joined_query ) {
+
+        my $parser = Search::QueryParser::SQL->new(
+            like           => $like,
+            fuzzify        => $fuzzy,
+            columns        => \%columns,
+            default_column => (
+                @default_columns
+                ? \@default_columns
+                : [ keys %columns ]
+            ),
+            strict => 1,
+        );
+
+        # must eval and re-throw since we run under strict
+        eval { $query = $parser->parse( $joined_query, uc($oper) eq 'AND' ); };
+        return $self->throw_error($@) if $@;
+
+        $sql = $query->rdbo;
+
+    }
+
+    #Carp::carp Data::Dump::dump $sql;
+
     return {
-        sql => ( scalar(@sql) > 2 && $ORify ) ? [ 'or' => \@sql ] : \@sql,
-        query => \%query
+        sql        => $sql,
+        query      => $query,
+        query_hash => \%pq,
     };
 }
 
@@ -272,13 +359,15 @@ sub make_pager {
     my ( $self, $count ) = @_;
     my $c      = $self->context;
     my $params = $c->req->params;
-    return if $params->{'_no_page'};
+    return if ( $params->{'cxc-no_page'} or $params->{'_no_page'} );
     return Data::Pageset->new(
         {   total_entries    => $count,
-            entries_per_page => $params->{'_page_size'}
+            entries_per_page => $params->{'cxc-page_size'}
+                || $params->{'_page_size'}
                 || $c->controller->page_size
                 || $self->page_size,
-            current_page => $params->{'_page'}
+            current_page => $params->{'cxc-page'}
+                || $params->{'_page'}
                 || 1,
             pages_per_set => 10,        #TODO make this configurable?
             mode          => 'slide',

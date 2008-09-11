@@ -24,6 +24,7 @@ __PACKAGE__->mk_accessors(
         allow_GET_writes
         naked_results
         page_size
+        view_on_single_result
         )
 );
 
@@ -35,7 +36,7 @@ __PACKAGE__->config(
     naked_results         => 0,
 );
 
-our $VERSION = '0.29';
+our $VERSION = '0.30';
 
 =head1 NAME
 
@@ -118,7 +119,7 @@ The fallback method. The default returns a 404 error.
 
 =cut
 
-sub default : Private {
+sub default : Path {
     my ( $self, $c, @args ) = @_;
     $c->res->body('Not found');
     $c->res->status(404);
@@ -154,8 +155,9 @@ sub fetch : Chained('/') PathPrefix CaptureArgs(1) {
 Should return an array of the name of the field(s) to fetch() I<pk_value> from
 and their respective values.
 
-The default behaviour is to return B<primary_key> and any corresponding
-value(s) passed via $c->req->params.
+The default behaviour is to return B<primary_key> and the
+corresponding value(s) from I<pk_value>.
+
 However, if you have other unique fields in your schema, you
 might return a unique field other than the primary key.
 This allows for a more flexible URI scheme.
@@ -187,19 +189,11 @@ sub get_primary_key {
     if ( ref $pk ) {
         my @val = split( m/;;/, $id );
         for my $col (@$pk) {
-            my $v
-                = exists $c->req->params->{$col}
-                ? $c->req->params->{$col}
-                : shift(@val);
-            push( @ret, $col => $v );
+            push( @ret, $col => shift(@val) );
         }
     }
     else {
-        @ret = (
-              $pk => exists $c->req->params->{$pk}
-            ? $c->req->params->{$pk}
-            : $id
-        );
+        @ret = ( $pk => $id );
     }
     return @ret;
 }
@@ -238,6 +232,8 @@ sub make_primary_key_string {
         $id = $obj->$pk;
     }
 
+    return $id unless defined $id;
+
     # must escape any / in $id since passing it to uri_for as-is
     # will break.
     $id =~ s!/!\%2f!g;
@@ -250,17 +246,41 @@ sub make_primary_key_string {
 Attribute: Local
 
 Namespace for creating a new object. Calls to fetch() and edit()
-with a B<primary_key> value of C<0> (zero).
+with a B<primary_key> value of C<0> (zero). 
+
+If the Form class has a 'field_value' method, create() will 
+pre-populate the Form instance and Object instance
+with param-based values (i.e. seeds the form via request params).
+
+Example:
+
+ http://localhost/foo/create?name=bar
+ # form and object will have name set to 'bar'
 
 B<NOTE:> This is a GET method named for consistency with the C
 in CRUD. It is not equivalent to a POST in REST terminology.
 
 =cut
 
-sub create : Local {
+sub create : Path('create') {
     my ( $self, $c ) = @_;
     $self->fetch( $c, 0 );
     $self->edit($c);
+
+    # allow for params to be passed in to seed the form/object
+    my $form = $c->stash->{form};
+    my $obj  = $c->stash->{object};
+    if ( $form->can('field_value') ) {
+        for my $field ( $self->field_names($c) ) {
+            if ( exists $c->req->params->{$field} ) {
+                $form->field_value( $field => $c->req->params->{$field} );
+                if ( $obj->can($field) ) {
+                    $obj->$field( $c->req->params->{$field} );
+                }
+            }
+        }
+    }
+
 }
 
 =head2 edit
@@ -529,7 +549,7 @@ sub related : PathPart('') Chained('fetch') CaptureArgs(2) {
         if ( uc( $c->req->method ) ne 'POST' ) {
             $c->res->status(400);
             $c->res->body('GET request not allowed');
-            $c->stash->{error} = 1; # so has_errors() will return true
+            $c->stash->{error} = 1;    # so has_errors() will return true
             return;
         }
     }
@@ -613,13 +633,13 @@ sub new {
     my $self = $class->next::method( $app_class, $args );
 
     # if model_adapter class is defined, load and instantiate it.
-    if ( $self->config->{model_adapter} ) {
-        Catalyst::Utils::ensure_class_loaded(
-            $self->config->{model_adapter} );
+    if ( $self->model_adapter ) {
+        Catalyst::Utils::ensure_class_loaded( $self->model_adapter );
         $self->model_adapter(
-            $self->config->{model_adapter}->new(
-                {   model_name => $self->config->{model_name},
-                    model_meta => $self->config->{model_meta}
+            $self->model_adapter->new(
+                {   model_name => $self->model_name,
+                    model_meta => $self->model_meta,
+                    app_class  => $app_class,
                 }
             )
         );
@@ -778,21 +798,23 @@ redirect resolving to view().
 sub postcommit {
     my ( $self, $c, $o ) = @_;
 
-    my $id = $self->make_primary_key_string($o);
+    unless ( defined $c->res->location and length $c->res->location ) {
+        my $id = $self->make_primary_key_string($o);
 
-    if ( $c->action->name eq 'rm' ) {
-        $c->response->redirect( $c->uri_for('') );
-    }
-    else {
-        $c->response->redirect( $c->uri_for( '', $id, 'view' ) );
+        if ( $c->action->name eq 'rm' ) {
+            $c->response->redirect( $c->uri_for('') );
+        }
+        else {
+            $c->response->redirect( $c->uri_for( '', $id, 'view' ) );
+        }
     }
 
     1;
 }
 
-=head2 view_on_single_result( I<context>, I<results> )
+=head2 uri_for_view_on_single_result( I<context>, I<results> )
 
-Returns 0 unless the config() key of the same name is true.
+Returns 0 unless view_on_single_result returns true.
 
 Otherwise, calls the primary_key() value on the first object
 in I<results> and constructs a uri_for() value to the edit()
@@ -800,9 +822,9 @@ action in the same class as the current action.
 
 =cut
 
-sub view_on_single_result {
+sub uri_for_view_on_single_result {
     my ( $self, $c, $results ) = @_;
-    return 0 unless $self->config->{view_on_single_result};
+    return 0 unless $self->view_on_single_result;
 
     # TODO require $results be a CatalystX::CRUD::Results object
     # so we can call next() instead of assuming array ref.
@@ -873,11 +895,14 @@ sub do_search {
     unless ( $c->stash->{fetch_no_results} ) {
         $results = $self->do_model( $c, 'search', $query );
     }
-    if (    $results
-        and $count == 1
-        and $c->stash->{view_on_single_result}
-        and ( my $uri = $self->view_on_single_result( $c, $results ) ) )
+
+    if (   $results
+        && $count == 1
+        && $c->stash->{view_on_single_result}
+        && ( my $uri = $self->uri_for_view_on_single_result( $c, $results ) )
+        )
     {
+        $c->log->debug("redirect for single_result") if $c->debug;
         $c->response->redirect($uri);
     }
     else {
@@ -888,7 +913,9 @@ sub do_search {
         }
 
         $c->stash->{results}
-            = $self->naked_results ? $results : CatalystX::CRUD::Results->new(
+            = $self->naked_results
+            ? $results
+            : CatalystX::CRUD::Results->new(
             {   count   => $count,
                 pager   => $pager,
                 results => $results,
@@ -896,6 +923,7 @@ sub do_search {
             }
             );
     }
+
 }
 
 =head1 CONVENIENCE METHODS

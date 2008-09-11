@@ -8,7 +8,7 @@ use base qw(
 use Class::C3;
 use Carp;
 
-__PACKAGE__->mk_accessors(qw( model_name context ));
+__PACKAGE__->mk_accessors(qw( model_name model_meta context app_class ));
 
 =head1 NAME
 

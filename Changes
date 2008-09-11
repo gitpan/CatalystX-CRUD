@@ -139,5 +139,28 @@ Revision history for CatalystX-CRUD
         * refactored REST controller to support related methods and provide better
           HTTP status checks and responses.
 
+0.30    11 Sept 2008
+        * fix uninit value warning in Controller
+        * change REST create() : Local to _rest_create() : Path('create') to make it easier for
+          create_form() to call create() in superclass.
+        * clean up old style $self->config->{value} to instead use $self->value in Controller
+        * add app_class() and model_meta() accessors to ModelAdapter 
+        * in base Controller, rename view_on_single_result() method to uri_for_view_on_single_result and make
+          accessor for the config value 'view_on_single_result'
+        * change all reserved param names in Model::Utils to use 'cxc-' prefix instead of '_'. Backwards compat
+          is preserved where possible.
+        * Model::Utils make_query() will uc() sort direction 
+        * change behaviour of get_primary_key() in base Controller to not look in req->params for pk values.
+          This allows for changing the PK as part of an update.
+        * add new() in REST to call next::method. Works around (some) multiple inheritance issues.
+        * check for $c->res->location before redirecting in postcommit()
+        * Model::Utils was refactored to use Search::QueryParser::SQL. The following methods were affected:
+           * sql_query_as_string() -- removed
+           * params_to_sql_query() -- now returns hashref with 3 items:
+                     - query isa Search::QueryParser::SQL::Query object
+                     - query_hash (formerly query) is a simple param-name => [values] hashref
+                     - sql is the output of S::QP::S::Query->rdbo
+           * make_sql_query() -- returned hash ref now has query_hash as plain_query value
+             and the stringify'd Query object as plain_query_str
 
 

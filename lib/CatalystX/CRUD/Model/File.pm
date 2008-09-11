@@ -10,7 +10,7 @@ use Class::C3;
 
 __PACKAGE__->mk_accessors(qw( inc_path ));
 
-our $VERSION = '0.29';
+our $VERSION = '0.30';
 
 =head1 NAME
 
@@ -77,21 +77,25 @@ sub fetch {
 
     # look through inc_path
     for my $dir ( @{ $self->inc_path } ) {
-        my $test = $self->object_class->new(
-            file => Path::Class::File->new( $dir, $file ) );
+        my $test = Path::Class::File->new( $dir, $file );
 
         if ( -s $test ) {
-            $file = $test;
+            $file->{delegate} = $test;
             $file->read;
             last;
         }
     }
 
-    # test if we found it or not
-    if ( $file->dir eq '.' ) {
-        $file = $self->object_class->new(
-            file => Path::Class::File->new( $self->inc_path->[0], $file ) );
+    #carp dump $file;
+
+    # make sure delegate() has absolute path
+    # while file() is relative to inc_path.
+    if ( $file->dir eq '.' or !$file->dir->is_absolute ) {
+        $file->{delegate}
+            = Path::Class::File->new( $self->inc_path->[0], $file );
     }
+
+    #carp dump $file;
 
     return $file;
 }
@@ -126,21 +130,55 @@ Returns an array ref of CXCO::File objects.
 
 =cut
 
-sub search {
-    my $self = shift;
-    my $filter_sub = shift || $self->make_query;
+sub _find {
+    my ( $self, $filter_sub, $root ) = @_;
     my %files;
     my $find_sub = sub {
 
-        carp "File::Find::Dir = $File::Find::dir\nfile = $_\n";
-        return unless $filter_sub->($_);
-        $files{$File::Find::name}++;
+        #warn "File::Find::Dir = $File::Find::dir";
+        #warn "file = $_";
+        #warn "name = $File::Find::name";
+
+        my $dir = Path::Class::dir($File::Find::dir);
+        my $f   = Path::Class::file($File::Find::name);
+        return if $dir eq $f;
+
+        return unless $filter_sub->( $root, $dir, $f );
+
+        # we want the file path relative to $root
+        # since that is the PK
+        my $rel = $dir->relative($root);
+        $rel =~ s!^\./!!;
+        my $key = Path::Class::file( $rel, $_ );
+
+        #warn "$key => $f";
+
+        $files{$key} = $f if -f $f;
     };
-    find( $find_sub, @{ $self->inc_path } );
+    find(
+        {   follow => 1,
+            wanted => $find_sub,
+        },
+        @{ $self->inc_path }
+    );
+    return \%files;
+}
 
-    carp dump \%files;
-
-    return [ map { $self->new_object( file => $_ ) } sort keys %files ];
+sub search {
+    my $self = shift;
+    my $filter_sub = shift || $self->make_query;
+    my @objects;
+    for my $root ( @{ $self->inc_path } ) {
+        my $files = $self->_find( $filter_sub, $root );
+        for my $relative ( sort keys %$files ) {
+            my $obj = $self->new_object(
+                file     => $relative,
+                delegate => $files->{$relative}
+            );
+            push @objects, $obj;
+        }
+    }
+    return \@objects;
 }
 
 =head2 count( I<filter_CODE> )
@@ -151,15 +189,14 @@ of I<filter_CODE>.
 =cut
 
 sub count {
-    my $self = shift;
+    my $self       = shift;
     my $filter_sub = shift || $self->make_query;
-    my $count;
-    my $find_sub = sub {
-        carp "File::Find::Dir = $File::Find::dir\nfile = $_\n";
-        return unless $filter_sub->($_);
-        $count++;
-    };
-    find( $find_sub, @{ $self->inc_path } );
+    my $count      = 0;
+    for my $root ( @{ $self->inc_path } ) {
+        my $files = $self->_find( $filter_sub, $root );
+        $count += scalar keys %$files;
+    }
+
     return $count;
 }
 

@@ -12,7 +12,7 @@ use overload(
 
 __PACKAGE__->mk_accessors(qw( content file ));
 
-our $VERSION = '0.29';
+our $VERSION = '0.30';
 
 =head1 NAME
 
@@ -46,7 +46,7 @@ sub new {
     my $self  = $class->next::method(@_);
     my $file  = $self->{file} or $self->throw_error("file param required");
     $self->{delegate}
-        = Path::Class::File->new( ref $file eq 'ARRAY' ? @$file : $file );
+        ||= Path::Class::File->new( ref $file eq 'ARRAY' ? @$file : $file );
     return $self;
 }
 
@@ -125,6 +125,8 @@ sub _write {
     my $fh = $self->delegate->openw();
     print {$fh} $self->content;
     $fh->close;
+
+    #warn "file written to $self";
     return -s $self->delegate;
 }
 

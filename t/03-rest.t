@@ -1,4 +1,4 @@
-use Test::More tests => 47;
+use Test::More tests => 54;
 use strict;
 use lib qw( lib t/lib );
 use_ok('CatalystX::CRUD::Model::File');
@@ -25,6 +25,7 @@ is( $res->content,
     "POST new file response"
 );
 
+####################################################
 # read the file we just created
 ok( $res = request( HTTP::Request->new( GET => '/rest/file/testfile' ) ),
     "GET new file" );
@@ -33,6 +34,7 @@ ok( $res = request( HTTP::Request->new( GET => '/rest/file/testfile' ) ),
 
 like( $res->content, qr/content => "hello world"/, "read file" );
 
+####################################################
 # update the file
 ok( $res = request(
         POST( '/rest/file/testfile', [ content => 'foo bar baz' ] )
@@ -42,6 +44,7 @@ ok( $res = request(
 
 like( $res->content, qr/content => "foo bar baz"/, "update file" );
 
+####################################################
 # create related file
 ok( $res = request(
         POST(
@@ -59,12 +62,23 @@ is( $res->content,
 
 is( $res->headers->{status}, 302, "new file 302 redirect status" );
 
+###################################################
+# test with no args
+
+#system("tree t/lib/MyApp/root");
+
+ok( $res = request('/rest/file'), "/ request with multiple items" );
+is( $res->headers->{status}, 200, "/ request with multiple items lists" );
+ok( $res->content =~ qr/foo bar baz/ && $res->content =~ qr/hello world/,
+    "content has 2 files" );
+
+###################################################
 # test the Arg matching with no rpc
 
 ok( $res = request('/rest/file/create'), "/rest/file/create" );
 is( $res->headers->{status}, 302, "/rest/file/create" );
 ok( $res = request('/rest/file'), "zero" );
-is( $res->headers->{status}, 302, "redirect == zero" );
+is( $res->headers->{status}, 200, "zero => list()" );
 ok( $res = request('/rest/file/testfile'), "one" );
 is( $res->headers->{status}, 200, "oid == one" );
 ok( $res = request('/rest/file/testfile/view'), "view" );
@@ -100,7 +114,7 @@ MyApp->controller('REST::File')->enable_rpc_compat(1);
 ok( $res = request('/rest/file/create'), "/rest/file/create" );
 is( $res->headers->{status}, 302, "/rest/file/create" );
 ok( $res = request('/rest/file'), "zero with rpc" );
-is( $res->headers->{status}, 302, "redirect == zero with rpc" );
+is( $res->headers->{status}, 200, "zero with rpc => list()" );
 ok( $res = request('/rest/file/testfile'), "one with rpc" );
 is( $res->headers->{status}, 200, "oid == one with rpc" );
 ok( $res = request('/rest/file/testfile/view'), "view with rpc" );
@@ -147,6 +161,15 @@ ok( $res = request(
     "rm file2"
 );
 
+ok( $res = request(
+        POST(
+            '/rest/file/otherdir%2ftestfile2/delete',
+            [ _http_method => 'DELETE' ]
+        )
+    ),
+    "rm otherdir/testfile2"
+);
+
 #diag( $res->content );
 
 # confirm it is gone
@@ -157,3 +180,8 @@ ok( $res = request( HTTP::Request->new( GET => '/rest/file/testfile' ) ),
 
 like( $res->content, qr/content => undef/, "file nuked" );
 
+ok( $res = request('/rest/file'), "/ request with no items" );
+
+#dump $res;
+is( $res->headers->{status}, 200, "/ request with no items == 200" );
+is( $res->content, "", "no content for no results" );

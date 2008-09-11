@@ -19,6 +19,7 @@ WriteMakefile(
         'Class::C3'             => 0,
         'Data::Dump'            => 0,  # for testing
         'Sort::SQL'             => 0.03,
+        'Search::QueryParser::SQL' => 0.005,
 
     },
     dist                => { COMPRESS => 'gzip -9f', SUFFIX => 'gz', },

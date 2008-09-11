@@ -6,7 +6,9 @@ use Carp;
 use Data::Dump;
 use Class::C3;
 
-our $VERSION = '0.29';
+__PACKAGE__->mk_accessors( qw( form_fields ) );
+
+our $VERSION = '0.30';
 
 =head1 NAME
 
@@ -61,16 +63,12 @@ sub form_to_object {
 
     # id always comes from url but not necessarily from form
     my $id = $c->stash->{object_id};
-    my %pk = $self->get_primary_key( $c, $id );
 
     # initialize the form with the object's values
     $form->$form_meth($obj);
 
     # set param values from request
     $form->params( $c->req->params );
-    for my $field ( keys %pk ) {
-        $form->param( $field => $pk{$field} );
-    }
 
     # override form's values with those from params
     # no_clear is important because we already initialized with object
@@ -87,21 +85,6 @@ sub form_to_object {
     # re-set object's values from the now-valid form
     $form->$obj_meth($obj);
 
-    # set PK(s) explicitly
-    for my $field ( keys %pk ) {
-        $obj->$field( $pk{$field} );
-    }
-
-    # let serial column work its magic
-    # if this is a first-time save (create)
-    if ( scalar( keys %pk ) == 1 or $id eq '0' ) {
-        my ( $field, $value ) = each %pk;
-        $obj->$field(undef)
-            if ( !$obj->$field || $obj->$field eq '0' || $value eq '0' );
-    }
-
-    #carp $self->serialize_object( $c, $obj );
-
     return $obj;
 }
 
@@ -113,8 +96,8 @@ Returns a new C<form_class> object every time, initialized with C<form_fields>.
 
 sub form {
     my ( $self, $c ) = @_;
-    my $form_class = $self->config->{form_class};
-    my $arg        = { fields => $self->config->{form_fields} };
+    my $form_class = $self->form_class;
+    my $arg        = { fields => $self->form_fields };
     my $form       = $form_class->new($arg);
     return $form;
 }
@@ -135,6 +118,13 @@ sub end : Private {
     if ( defined $c->stash->{object} ) {
         $c->res->body( $self->serialize_object( $c, $c->stash->{object} ) );
     }
+    elsif ( defined $c->stash->{results} ) {
+        my @body;
+        while ( my $result = $c->stash->{results}->next ) {
+            push( @body, $self->serialize_object( $c, $result ) );
+        }
+        $c->res->body( join( "\n", @body ) );
+    }
     if ( $self->has_errors($c) ) {
         my $err = join( "\n", @{ $c->error } );
         $c->log->error($err) if $c->debug;
@@ -153,7 +143,7 @@ of key/value pairs and send through Data::Dump::dump().
 
 sub serialize_object {
     my ( $self, $c, $object ) = @_;
-    my $fields = $self->config->{form_fields};
+    my $fields = $self->form_fields;
     my $serial = {};
     for my $f (@$fields) {
         $serial->{$f} = defined $object->$f ? $object->$f . '' : undef;
