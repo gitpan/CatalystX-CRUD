@@ -163,4 +163,7 @@ Revision history for CatalystX-CRUD
            * make_sql_query() -- returned hash ref now has query_hash as plain_query value
              and the stringify'd Query object as plain_query_str
 
+0.31    16 Sept 2008
+        * add missing req to Makefile.PL
+        * force field_names to be an ARRAY ref in Utils make_sql_query()
 

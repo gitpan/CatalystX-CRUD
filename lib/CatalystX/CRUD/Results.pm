@@ -7,7 +7,7 @@ use Class::C3;
 
 __PACKAGE__->mk_ro_accessors(qw( count pager query results ));
 
-our $VERSION = '0.30';
+our $VERSION = '0.31';
 
 =head1 NAME
 

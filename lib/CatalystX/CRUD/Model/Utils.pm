@@ -9,7 +9,7 @@ use Carp;
 
 __PACKAGE__->mk_accessors(qw( use_ilike ne_sign ));
 
-our $VERSION = '0.30';
+our $VERSION = '0.31';
 
 =head1 NAME
 
@@ -151,6 +151,10 @@ sub make_sql_query {
         && exists $c->req->params->{'cxc-query'} )
     {
         $field_names = $c->req->params->{'cxc-query-fields'};
+    }
+
+    if ( !ref($field_names) ) {
+        $field_names = [$field_names];
     }
 
     my $p2q       = $self->params_to_sql_query($field_names);

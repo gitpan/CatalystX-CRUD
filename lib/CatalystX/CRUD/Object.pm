@@ -8,7 +8,7 @@ Class::C3::initialize();
 
 __PACKAGE__->mk_ro_accessors(qw( delegate ));
 
-our $VERSION = '0.30';
+our $VERSION = '0.31';
 
 =head1 NAME
 
