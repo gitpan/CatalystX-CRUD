@@ -167,3 +167,6 @@ Revision history for CatalystX-CRUD
         * add missing req to Makefile.PL
         * force field_names to be an ARRAY ref in Utils make_sql_query()
 
+0.32    21 Oct 2008
+        * use Class::Data::Inheritable to define delegate_class() class accessor in base Model
+

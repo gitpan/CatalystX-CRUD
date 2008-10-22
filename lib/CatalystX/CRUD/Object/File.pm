@@ -11,8 +11,9 @@ use overload(
 );
 
 __PACKAGE__->mk_accessors(qw( content file ));
+__PACKAGE__->delegate_class('Path::Class::File');
 
-our $VERSION = '0.31';
+our $VERSION = '0.32';
 
 =head1 NAME
 
@@ -46,7 +47,7 @@ sub new {
     my $self  = $class->next::method(@_);
     my $file  = $self->{file} or $self->throw_error("file param required");
     $self->{delegate}
-        ||= Path::Class::File->new( ref $file eq 'ARRAY' ? @$file : $file );
+        ||= $self->delegate_class->new( ref $file eq 'ARRAY' ? @$file : $file );
     return $self;
 }
 

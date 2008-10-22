@@ -5,12 +5,12 @@ use base qw( CatalystX::CRUD::Model );
 use File::Find;
 use Carp;
 use Data::Dump qw( dump );
-use Path::Class::File;
+use Path::Class;
 use Class::C3;
 
 __PACKAGE__->mk_accessors(qw( inc_path ));
 
-our $VERSION = '0.31';
+our $VERSION = '0.32';
 
 =head1 NAME
 
@@ -21,8 +21,9 @@ CatalystX::CRUD::Model::File - filesystem CRUD model
  package MyApp::Model::Foo;
  use base qw( CatalystX::CRUD::Model::File );
  __PACKAGE__->config( 
-    object_class => 'MyApp::File',
-    inc_path     => [ '/some/path', '/other/path' ],
+    object_class    => 'MyApp::File',
+    delegate_class  => 'Path::Class::File', # optional
+    inc_path        => [ '/some/path', '/other/path' ],
  );
  
  1;
@@ -49,6 +50,10 @@ to the C<root> config value.
 sub Xsetup {
     my ( $self, $c ) = @_;
     $self->{inc_path} ||= [ $c->config->{root} ];
+    if ( $self->config->{delegate_class} ) {
+        $self->object_class->delegate_class(
+            $self->config->{delegate_class} );
+    }
     $self->next::method($c);
 }
 
@@ -77,7 +82,7 @@ sub fetch {
 
     # look through inc_path
     for my $dir ( @{ $self->inc_path } ) {
-        my $test = Path::Class::File->new( $dir, $file );
+        my $test = $self->object_class->delegate_class->new( $dir, $file );
 
         if ( -s $test ) {
             $file->{delegate} = $test;
@@ -92,7 +97,8 @@ sub fetch {
     # while file() is relative to inc_path.
     if ( $file->dir eq '.' or !$file->dir->is_absolute ) {
         $file->{delegate}
-            = Path::Class::File->new( $self->inc_path->[0], $file );
+            = $self->object_class->delegate_class->new( $self->inc_path->[0],
+            $file );
     }
 
     #carp dump $file;
@@ -133,7 +139,8 @@ Returns an array ref of CXCO::File objects.
 sub _find {
     my ( $self, $filter_sub, $root ) = @_;
     my %files;
-    my $find_sub = sub {
+    my $del_class = $self->object_class->delegate_class;
+    my $find_sub  = sub {
 
         #warn "File::Find::Dir = $File::Find::dir";
         #warn "file = $_";
@@ -149,7 +156,7 @@ sub _find {
         # since that is the PK
         my $rel = $dir->relative($root);
         $rel =~ s!^\./!!;
-        my $key = Path::Class::file( $rel, $_ );
+        my $key = $del_class->new( $rel, $_ );
 
         #warn "$key => $f";
 
@@ -246,8 +253,8 @@ sub add_related {
 
         # if not, create symlink
         # wrap in eval since win32 (others?) do not support symlink
-        my $link
-            = Path::Class::File->new( $file->dir, $other_file->basename );
+        my $link = $self->object_class->delegate_class->new( $file->dir,
+            $other_file->basename );
         my $success = 1;
         my $symlink_supported
             = eval { $success = symlink( "$file", "$link" ); 1 };
@@ -297,8 +304,8 @@ sub rm_related {
     }
 
     if ( $rel_name eq 'dir' ) {
-        my $link
-            = Path::Class::File->new( $file->dir, $other_file->basename );
+        my $link = $self->object_class->delegate_class->new( $file->dir,
+            $other_file->basename );
 
         unless ( -l $link ) {
             $self->throw_error("$other_file is not a symlink");

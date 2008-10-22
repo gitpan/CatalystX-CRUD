@@ -1,24 +1,31 @@
 --- #YAML:1.0
-name:                CatalystX-CRUD
-version:             0.31
-abstract:            CRUD framework for Catalyst applications
-license:             ~
-author:              
+name:               CatalystX-CRUD
+version:            0.32
+abstract:           CRUD framework for Catalyst applications
+author:
     - Peter Karman <perl@peknet.com>
-generated_by:        ExtUtils::MakeMaker version 6.42
-distribution_type:   module
-requires:     
-    Catalyst::Component::ACCEPT_CONTEXT: 0
-    Catalyst::Exception:           0
-    Catalyst::Runtime:             0
-    Class::Accessor::Fast:         0
-    Class::C3:                     0
-    Data::Dump:                    0
-    Data::Pageset:                 0
-    Path::Class::File:             0
-    Search::QueryParser::SQL:      0.005
-    Sort::SQL:                     0.03
-    Test::More:                    0
+license:            unknown
+distribution_type:  module
+configure_requires:
+    ExtUtils::MakeMaker:  0
+requires:
+    Catalyst::Component::ACCEPT_CONTEXT:  0
+    Catalyst::Exception:  0
+    Catalyst::Runtime:    0
+    Class::Accessor::Fast:  0
+    Class::C3:            0
+    Class::Data::Inheritable:  0
+    Data::Dump:           0
+    Data::Pageset:        0
+    Path::Class::File:    0
+    Search::QueryParser::SQL:  0.005
+    Sort::SQL:            0.03
+    Test::More:           0
+no_index:
+    directory:
+        - t
+        - inc
+generated_by:       ExtUtils::MakeMaker version 6.46
 meta-spec:
-    url:     http://module-build.sourceforge.net/META-spec-v1.3.html
-    version: 1.3
+    url:      http://module-build.sourceforge.net/META-spec-v1.4.html
+    version:  1.4

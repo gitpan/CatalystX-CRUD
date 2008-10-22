@@ -1,14 +1,15 @@
 package CatalystX::CRUD::Object;
 use strict;
 use warnings;
-use base qw( Class::Accessor::Fast CatalystX::CRUD );
+use base qw( Class::Accessor::Fast Class::Data::Inheritable CatalystX::CRUD );
 use Carp;
 use Class::C3;
 Class::C3::initialize();
 
 __PACKAGE__->mk_ro_accessors(qw( delegate ));
+__PACKAGE__->mk_classdata('delegate_class');
 
-our $VERSION = '0.31';
+our $VERSION = '0.32';
 
 =head1 NAME
 
