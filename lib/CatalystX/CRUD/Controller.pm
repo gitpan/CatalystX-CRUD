@@ -36,7 +36,7 @@ __PACKAGE__->config(
     naked_results         => 0,
 );
 
-our $VERSION = '0.32';
+our $VERSION = '0.33';
 
 =head1 NAME
 

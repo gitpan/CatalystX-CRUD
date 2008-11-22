@@ -13,7 +13,7 @@ use overload(
 __PACKAGE__->mk_accessors(qw( content file ));
 __PACKAGE__->delegate_class('Path::Class::File');
 
-our $VERSION = '0.32';
+our $VERSION = '0.33';
 
 =head1 NAME
 

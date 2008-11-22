@@ -170,3 +170,7 @@ Revision history for CatalystX-CRUD
 0.32    21 Oct 2008
         * use Class::Data::Inheritable to define delegate_class() class accessor in base Model
 
+0.33    22 Nov 2008
+        * fix Tutorial wrt RT#40846
+
+

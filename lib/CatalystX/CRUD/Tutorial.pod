@@ -228,19 +228,13 @@ C<lib/MyCRUD/Song/Form.pm> respectively.
  
  sub init_with_album {
     my $self  = shift;
-    my $album = shift;
-    if (!$album or !$album->isa('MyCRUD::Album')) {
-        croak "need MyCRUD::Album object";
-    }
+    my $album = shift or croak "need MyCRUD::Album object";
     return $self->init_with_object($album);
  }
 
  sub album_from_form {
     my $self = shift;
-    my $album = shift;
-    if (!$album or !$album->isa('MyCRUD::Album')) {
-        croak "need MyCRUD::Album object";
-    }
+    my $album = shift or croak "need MyCRUD::Album object";
     $self->object_from_form($album);
     return $album;
  }
@@ -276,20 +270,13 @@ C<lib/MyCRUD/Song/Form.pm> respectively.
 
  sub init_with_song {
     my $self = shift;
-    my $song = shift;
-    if (!$song or !$song->isa('MyCRUD::Song'))
-    {
-        croak "need MyCRUD::Song object";
-    }
+    my $song = shift or croak "need MyCRUD::Song object";
     $self->init_with_object($song);
  }
  
  sub song_from_form {
     my $self = shift;
-    my $song = shift;
-    if (!$song or !$song->isa('MyCRUD::Song')) {
-        croak "need MyCRUD::Song object";
-    }
+    my $song = shift or croak "need MyCRUD::Song object";
     $self->object_from_form($song);
     return $song;
  }
