@@ -36,7 +36,7 @@ __PACKAGE__->config(
     naked_results         => 0,
 );
 
-our $VERSION = '0.33';
+our $VERSION = '0.34';
 
 =head1 NAME
 
@@ -226,6 +226,12 @@ sub make_primary_key_string {
             $v =~ s/;/ sprintf( "%%%02X", ';' ) /eg;
             push( @vals, $v );
         }
+
+        # if we had no vals, return undef
+        if ( !grep {length} @vals ) {
+            return $id;
+        }
+
         $id = join( ';;', @vals );
     }
     else {

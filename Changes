@@ -173,4 +173,6 @@ Revision history for CatalystX-CRUD
 0.33    22 Nov 2008
         * fix Tutorial wrt RT#40846
 
+0.34    24 Nov 2008
+        * fix make_primary_key_string to return undef if multi-col PK has no values
 
