@@ -176,3 +176,7 @@ Revision history for CatalystX-CRUD
 0.34    24 Nov 2008
         * fix make_primary_key_string to return undef if multi-col PK has no values
 
+0.35    24 Nov 2008
+        * call edit() after initializing object and form with passed in params, so that the init_form()
+          method can have all data already set.
+

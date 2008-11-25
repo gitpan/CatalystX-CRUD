@@ -36,7 +36,7 @@ __PACKAGE__->config(
     naked_results         => 0,
 );
 
-our $VERSION = '0.34';
+our $VERSION = '0.35';
 
 =head1 NAME
 
@@ -271,21 +271,26 @@ in CRUD. It is not equivalent to a POST in REST terminology.
 sub create : Path('create') {
     my ( $self, $c ) = @_;
     $self->fetch( $c, 0 );
-    $self->edit($c);
 
     # allow for params to be passed in to seed the form/object
     my $form = $c->stash->{form};
     my $obj  = $c->stash->{object};
     if ( $form->can('field_value') ) {
         for my $field ( $self->field_names($c) ) {
+            $c->log->debug("checking for param: $field") if $c->debug;
             if ( exists $c->req->params->{$field} ) {
+                $c->log->debug("setting form param: $field") if $c->debug;
                 $form->field_value( $field => $c->req->params->{$field} );
                 if ( $obj->can($field) ) {
+                    $c->log->debug("setting object method: $field")
+                        if $c->debug;
                     $obj->$field( $c->req->params->{$field} );
                 }
             }
         }
     }
+
+    $self->edit($c);
 
 }
 

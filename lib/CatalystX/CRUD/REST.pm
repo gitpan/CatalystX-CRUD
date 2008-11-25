@@ -9,7 +9,7 @@ use Data::Dump qw( dump );
 __PACKAGE__->mk_accessors(qw( enable_rpc_compat ));
 __PACKAGE__->config( enable_rpc_compat => 0 );
 
-our $VERSION = '0.34';
+our $VERSION = '0.35';
 
 #warn "REST VERSION = $VERSION";
 
