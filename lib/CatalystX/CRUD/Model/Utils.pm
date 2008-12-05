@@ -9,7 +9,7 @@ use Carp;
 
 __PACKAGE__->mk_accessors(qw( use_ilike ne_sign ));
 
-our $VERSION = '0.35';
+our $VERSION = '0.36';
 
 =head1 NAME
 
@@ -113,6 +113,16 @@ Which field names to set as 'default_column' in the Search::QueryParser::SQL
 parser object. The default is all I<field_names>. B<NOTE> this param is only
 checked if C<cxc-query> has a value.
 
+=item cxc-fuzzy
+
+If set to a true value triggers the 'fuzzify' feature in 
+Search::QueryParser::SQL.
+
+=item cxc-fuzzy2
+
+If set to a true value, overrides cxc-fuzzy and triggers the 'fuzzify2'
+feature in Search::QueryParser::SQL.
+
 =back
 
 =cut
@@ -138,9 +148,10 @@ sub _which_sort {
 }
 
 sub make_sql_query {
-    my $self        = shift;
-    my $c           = $self->context;
-    my $field_names = shift
+    my $self = shift;
+    my $c    = $self->context;
+    my $field_names 
+        = shift
         || $c->req->params->{'cxc-query-fields'}
         || $c->controller->field_names($c)
         || $self->throw_error("field_names required");
@@ -157,12 +168,13 @@ sub make_sql_query {
         $field_names = [$field_names];
     }
 
-    my $p2q       = $self->params_to_sql_query($field_names);
-    my $params    = $c->req->params;
-    my $sp        = Sort::SQL->string2array( $self->_which_sort($c) );
-    my $s         = join( ' ', map {%$_} @$sp );
-    my $offset    = $params->{'cxc-offset'} || $params->{'_offset'};
-    my $page_size = $params->{'cxc-page_size'}
+    my $p2q    = $self->params_to_sql_query($field_names);
+    my $params = $c->req->params;
+    my $sp     = Sort::SQL->string2array( $self->_which_sort($c) );
+    my $s      = join( ' ', map {%$_} @$sp );
+    my $offset = $params->{'cxc-offset'} || $params->{'_offset'};
+    my $page_size 
+        = $params->{'cxc-page_size'}
         || $params->{'_page_size'}
         || $c->controller->page_size
         || $self->page_size;
@@ -246,6 +258,7 @@ sub params_to_sql_query {
     my $params = $c->req->params;
     my $oper   = $params->{'cxc-op'} || $params->{'_op'} || 'AND';
     my $fuzzy  = $params->{'cxc-fuzzy'} || $params->{'_fuzzy'} || 0;
+    my $fuzzy2 = $params->{'cxc-fuzzy2'} || 0;
 
     my %columns;
     for my $fn (@$field_names) {
@@ -293,12 +306,17 @@ sub params_to_sql_query {
             # we don't want to "double encode" $like because it will
             # be re-parsed as a word not an op, so we have our a modified
             # parser for per-field queries.
-            my $parser = Search::QueryParser::SQL->new(
+            my %args = (
                 like    => '=',
                 fuzzify => $fuzzy,
                 columns => \%columns,
                 strict  => 1,
             );
+            if ($fuzzy2) {
+                delete $args{fuzzify};
+                $args{fuzzify2} = 1;
+            }
+            my $parser = Search::QueryParser::SQL->new(%args);
 
             my $query;
             eval {
@@ -318,7 +336,7 @@ sub params_to_sql_query {
 
     if ( length $joined_query ) {
 
-        my $parser = Search::QueryParser::SQL->new(
+        my %args = (
             like           => $like,
             fuzzify        => $fuzzy,
             columns        => \%columns,
@@ -328,7 +346,13 @@ sub params_to_sql_query {
                 : [ keys %columns ]
             ),
             strict => 1,
+
         );
+        if ($fuzzy2) {
+            delete $args{fuzzify};
+            $args{fuzzify2} = 1;
+        }
+        my $parser = Search::QueryParser::SQL->new(%args);
 
         # must eval and re-throw since we run under strict
         eval { $query = $parser->parse( $joined_query, uc($oper) eq 'AND' ); };

@@ -180,3 +180,7 @@ Revision history for CatalystX-CRUD
         * call edit() after initializing object and form with passed in params, so that the init_form()
           method can have all data already set.
 
+0.36    4 Dec 2008
+        * add cxc-fuzzy2 feature and document both it and cxc-fuzzy.
+
+

@@ -1,6 +1,6 @@
 --- #YAML:1.0
 name:               CatalystX-CRUD
-version:            0.35
+version:            0.36
 abstract:           CRUD framework for Catalyst applications
 author:
     - Peter Karman <perl@peknet.com>
