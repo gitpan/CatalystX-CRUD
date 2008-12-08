@@ -8,7 +8,7 @@ use base qw(
 );
 use Class::C3;
 
-our $VERSION = '0.36';
+our $VERSION = '0.37';
 
 __PACKAGE__->mk_accessors(qw( object_class page_size ));
 

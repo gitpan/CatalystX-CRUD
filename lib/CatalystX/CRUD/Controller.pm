@@ -36,7 +36,7 @@ __PACKAGE__->config(
     naked_results         => 0,
 );
 
-our $VERSION = '0.36';
+our $VERSION = '0.37';
 
 =head1 NAME
 
@@ -380,7 +380,11 @@ sub save : PathPart Chained('fetch') Args(0) {
         }
     }
 
-    if ( $c->request->param('_delete') ) {
+    if ($c->request->params->{'_delete'}
+        or ( exists $c->request->params->{'x-tunneled-method'}
+            and $c->request->params->{'x-tunneled-method'} eq 'DELETE' )
+        )
+    {
         $c->action->name('rm');    # so we can test against it in postcommit()
         $self->rm($c);
         return;

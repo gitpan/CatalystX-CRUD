@@ -183,4 +183,6 @@ Revision history for CatalystX-CRUD
 0.36    4 Dec 2008
         * add cxc-fuzzy2 feature and document both it and cxc-fuzzy.
 
+0.37    8 Dec 2008
+        * support x-tunneled-method for DELETE in save() calls
 
