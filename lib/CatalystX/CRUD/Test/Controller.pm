@@ -8,7 +8,7 @@ use Class::C3;
 
 __PACKAGE__->mk_accessors( qw( form_fields ) );
 
-our $VERSION = '0.37';
+our $VERSION = '0.38';
 
 =head1 NAME
 

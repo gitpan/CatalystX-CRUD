@@ -36,7 +36,7 @@ __PACKAGE__->config(
     naked_results         => 0,
 );
 
-our $VERSION = '0.37';
+our $VERSION = '0.38';
 
 =head1 NAME
 
@@ -107,7 +107,7 @@ Calls the form() method and saves the return value in stash() as C<form>.
 sub auto : Private {
     my ( $self, $c, @args ) = @_;
     $c->stash->{form} = $self->form($c);
-    $self->next::method( $c, @args ) if $self->next::can;
+    $self->maybe::next::method( $c, @args );
     1;
 }
 
@@ -716,7 +716,7 @@ sub form {
     elsif ( $self->{_form}->can('reset') ) {
         $self->{_form}->reset;
     }
-    $self->next::method($c) if $self->next::can;
+    $self->maybe::next::method($c);
     return $self->{_form};
 }
 

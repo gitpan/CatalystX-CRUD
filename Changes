@@ -186,3 +186,7 @@ Revision history for CatalystX-CRUD
 0.37    8 Dec 2008
         * support x-tunneled-method for DELETE in save() calls
 
+0.38    12 Jan 2009
+        * use maybe::next::method
+        * fix view_on_single_result bug in Test::Controller
+
