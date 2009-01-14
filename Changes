@@ -190,3 +190,6 @@ Revision history for CatalystX-CRUD
         * use maybe::next::method
         * fix view_on_single_result bug in Test::Controller
 
+0.39    14 Jan 2009
+        * add missing file to MANIFEST that causes tests to fail in 0.38
+ 

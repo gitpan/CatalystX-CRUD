@@ -27,6 +27,7 @@ t/boilerplate.t
 t/lib/MyApp.pm
 t/lib/MyApp/Controller/File.pm
 t/lib/MyApp/Controller/FileAdapter.pm
+t/lib/MyApp/Controller/FetchRewrite.pm
 t/lib/MyApp/Controller/REST/File.pm
 t/lib/MyApp/Controller/Search.pm
 t/lib/MyApp/File.pm
