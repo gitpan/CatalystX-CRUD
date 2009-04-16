@@ -36,7 +36,7 @@ __PACKAGE__->config(
     naked_results         => 0,
 );
 
-our $VERSION = '0.39';
+our $VERSION = '0.40';
 
 =head1 NAME
 
@@ -298,7 +298,7 @@ sub create : Path('create') {
 
 Attribute: chained to fetch(), expecting no arguments.
 
-Checks the can_write() and has_errors() methods before proceeding.
+Checks the can_read() and has_errors() methods before proceeding.
 
 Populates the C<form> in stash() with the C<object> in stash(),
 using the B<init_form> method. Sets the C<template> value in stash()
@@ -309,7 +309,7 @@ to B<default_template>.
 sub edit : PathPart Chained('fetch') Args(0) {
     my ( $self, $c ) = @_;
     return if $self->has_errors($c);
-    unless ( $self->can_write($c) ) {
+    unless ( $self->can_read($c) ) {
         $self->throw_error('Permission denied');
         return;
     }

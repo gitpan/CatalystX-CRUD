@@ -17,7 +17,7 @@ WriteMakefile(
         'Catalyst::Runtime'     => 0,
         'Catalyst::Exception'   => 0,
         'Path::Class::File'     => 0,
-        'Class::C3'             => 0,
+        'Class::C3'             => 0.20,
         'Data::Dump'            => 0,  # for testing
         'Sort::SQL'             => 0.03,
         'Search::QueryParser::SQL' => 0.005,

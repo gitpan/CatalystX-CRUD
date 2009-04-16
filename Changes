@@ -192,4 +192,9 @@ Revision history for CatalystX-CRUD
 
 0.39    14 Jan 2009
         * add missing file to MANIFEST that causes tests to fail in 0.38
+
+0.40    16 April 2009
+        * change base Controller to call can_read() rather than can_write() in edit().
+          This is because the call to edit() does not actually write anything; it's just a GET
+          for a form.
  
