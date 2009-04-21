@@ -197,4 +197,8 @@ Revision history for CatalystX-CRUD
         * change base Controller to call can_read() rather than can_write() in edit().
           This is because the call to edit() does not actually write anything; it's just a GET
           for a form.
+
+0.41    21 April 2009
+        * remove Catalyst::Component::ACCEPT_CONTEXT as a dependency since it has not been
+          updated for Catalyst 5.8.
  

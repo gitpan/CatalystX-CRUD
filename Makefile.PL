@@ -13,7 +13,6 @@ WriteMakefile(
         'Data::Pageset'    => 0,
         'Class::Accessor::Fast' => 0,
         'Class::Data::Inheritable' => 0,
-        'Catalyst::Component::ACCEPT_CONTEXT' => 0,
         'Catalyst::Runtime'     => 0,
         'Catalyst::Exception'   => 0,
         'Path::Class::File'     => 0,

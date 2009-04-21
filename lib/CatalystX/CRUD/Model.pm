@@ -3,14 +3,14 @@ use strict;
 use warnings;
 use base qw(
     CatalystX::CRUD
-    Catalyst::Component::ACCEPT_CONTEXT
     Catalyst::Model
 );
 use Class::C3;
+use Scalar::Util ();
 
-our $VERSION = '0.40';
+our $VERSION = '0.41';
 
-__PACKAGE__->mk_accessors(qw( object_class page_size ));
+__PACKAGE__->mk_accessors(qw( object_class page_size context ));
 
 __PACKAGE__->config( page_size => 50 );
 
@@ -117,6 +117,51 @@ sub Xsetup {
     }
 
     return $self;
+}
+
+=head2 ACCEPT_CONTEXT
+
+(Cribbed from Catalyst::Component::ACCEPT_CONTEXT to reduce the (broken
+in 5.8) dependency.)
+
+Catalyst calls this method to give the current context to your model.
+You should never call it directly.
+
+Note that a new instance of your component isn't created.  All we do
+here is shove C<$c> into your component.  ACCEPT_CONTEXT allows for
+other behavior that may be more useful; if you want something else to
+happen just implement it yourself.
+
+See L<Catalyst::Component> for details.
+
+=cut
+
+sub ACCEPT_CONTEXT {
+    my $self    = shift;
+    my $context = shift;
+
+    $self->{context} = $context;
+    Scalar::Util::weaken( $self->{context} );
+
+    return $self->maybe::next::method( $context, @_ ) || $self;
+}
+
+=head2 COMPONENT
+
+(Cribbed from Catalyst::Component::ACCEPT_CONTEXT to reduce the (broken
+in 5.8) dependency.)
+
+Overridden to use initial application object as context before a request.
+
+=cut
+
+sub COMPONENT {
+    my $class = shift;
+    my $app   = shift;
+    my $args  = shift;
+    $args->{context} = $app;
+    Scalar::Util::weaken( $args->{context} ) if ref $args->{context};
+    return $class->maybe::next::method( $app, $args, @_ );
 }
 
 =head2 page_size
