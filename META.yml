@@ -1,6 +1,6 @@
 --- #YAML:1.0
 name:               CatalystX-CRUD
-version:            0.41
+version:            0.42
 abstract:           CRUD framework for Catalyst applications
 author:
     - Peter Karman <perl@peknet.com>
@@ -11,6 +11,7 @@ configure_requires:
 build_requires:
     ExtUtils::MakeMaker:  0
 requires:
+    Catalyst::Component::ACCEPT_CONTEXT:  0.06
     Catalyst::Exception:  0
     Catalyst::Runtime:    0
     Class::Accessor::Fast:  0
@@ -18,6 +19,7 @@ requires:
     Class::Data::Inheritable:  0
     Data::Dump:           0
     Data::Pageset:        0
+    MRO::Compat:          0.1
     Path::Class::File:    0
     Search::QueryParser::SQL:  0.005
     Sort::SQL:            0.03

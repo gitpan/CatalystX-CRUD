@@ -4,11 +4,11 @@ use warnings;
 use base qw( CatalystX::CRUD::Controller );
 use Carp;
 use Data::Dump;
-use Class::C3;
+use mro 'c3';
 
 __PACKAGE__->mk_accessors( qw( form_fields ) );
 
-our $VERSION = '0.41';
+our $VERSION = '0.42';
 
 =head1 NAME
 

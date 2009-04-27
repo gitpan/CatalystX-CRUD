@@ -3,11 +3,12 @@ use strict;
 use warnings;
 use base qw( Class::Accessor::Fast );
 use Carp;
-use Class::C3;
+use MRO::Compat;
+use mro 'c3';
 
 __PACKAGE__->mk_ro_accessors(qw( count pager query results ));
 
-our $VERSION = '0.41';
+our $VERSION = '0.42';
 
 =head1 NAME
 

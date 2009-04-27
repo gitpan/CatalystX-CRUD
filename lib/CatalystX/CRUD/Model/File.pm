@@ -6,11 +6,11 @@ use File::Find;
 use Carp;
 use Data::Dump qw( dump );
 use Path::Class;
-use Class::C3;
+use mro 'c3';
 
 __PACKAGE__->mk_accessors(qw( inc_path ));
 
-our $VERSION = '0.41';
+our $VERSION = '0.42';
 
 =head1 NAME
 

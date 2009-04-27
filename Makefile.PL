@@ -14,8 +14,10 @@ WriteMakefile(
         'Class::Accessor::Fast' => 0,
         'Class::Data::Inheritable' => 0,
         'Catalyst::Runtime'     => 0,
+        'Catalyst::Component::ACCEPT_CONTEXT' => 0.06,
         'Catalyst::Exception'   => 0,
         'Path::Class::File'     => 0,
+        'MRO::Compat'           => 0.10,
         'Class::C3'             => 0.20,
         'Data::Dump'            => 0,  # for testing
         'Sort::SQL'             => 0.03,

@@ -3,13 +3,14 @@ use strict;
 use warnings;
 use base qw( Class::Accessor::Fast Class::Data::Inheritable CatalystX::CRUD );
 use Carp;
-use Class::C3;
+use MRO::Compat;
+use mro 'c3';
 Class::C3::initialize();
 
 __PACKAGE__->mk_ro_accessors(qw( delegate ));
 __PACKAGE__->mk_classdata('delegate_class');
 
-our $VERSION = '0.41';
+our $VERSION = '0.42';
 
 =head1 NAME
 

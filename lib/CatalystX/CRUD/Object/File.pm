@@ -4,7 +4,7 @@ use warnings;
 use base qw( CatalystX::CRUD::Object );
 use Path::Class::File;
 use Carp;
-use Class::C3;
+use mro 'c3';
 use overload(
     q[""]    => sub { shift->delegate },
     fallback => 1,
@@ -13,7 +13,7 @@ use overload(
 __PACKAGE__->mk_accessors(qw( content file ));
 __PACKAGE__->delegate_class('Path::Class::File');
 
-our $VERSION = '0.41';
+our $VERSION = '0.42';
 
 =head1 NAME
 

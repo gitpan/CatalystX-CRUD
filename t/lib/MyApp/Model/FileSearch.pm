@@ -6,7 +6,7 @@ use base qw(
 );
 use MyApp::File;
 __PACKAGE__->config( object_class => 'MyApp::File' );
-use Class::C3;
+use mro 'c3';
 
 sub make_query {
     my ($self) = @_;

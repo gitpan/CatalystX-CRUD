@@ -3,13 +3,14 @@ use strict;
 use warnings;
 use base qw( CatalystX::CRUD::Controller );
 use Carp;
-use Class::C3;
+use MRO::Compat;
+use mro 'c3';
 use Data::Dump qw( dump );
 
 __PACKAGE__->mk_accessors(qw( enable_rpc_compat ));
 __PACKAGE__->config( enable_rpc_compat => 0 );
 
-our $VERSION = '0.41';
+our $VERSION = '0.42';
 
 #warn "REST VERSION = $VERSION";
 
@@ -71,7 +72,8 @@ MyApp.pm file, just after the setup() call:
  __PACKAGE__->setup();
  
  # add these 2 lines
- use Class::C3;
+ use MRO::Compat;
+use mro 'c3';
  Class::C3::initialize();
 
 This is required for Class::C3 to resolve the inheritance chain correctly,
@@ -149,6 +151,8 @@ sub rest : Path {
         return;
     }
 
+    $c->log->debug( "rpc compat mode = " . $self->enable_rpc_compat )
+        if $c->debug;
     $c->log->debug( "rest args : " . dump \@arg ) if $c->debug;
 
     my $n = scalar @arg;
