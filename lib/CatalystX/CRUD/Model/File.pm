@@ -10,7 +10,7 @@ use mro 'c3';
 
 __PACKAGE__->mk_accessors(qw( inc_path ));
 
-our $VERSION = '0.42';
+our $VERSION = '0.43';
 
 =head1 NAME
 

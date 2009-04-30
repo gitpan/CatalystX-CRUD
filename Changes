@@ -207,4 +207,10 @@ Revision history for CatalystX-CRUD
           using Class::C3::Adopt::NEXT (thanks to t0m)
         * change from 'use Class::C3' to 'use mro "c3"' with new dep on MRO::Compat
         * added some debugging in tests
-         
+        
+0.43    29 April 2009
+        * rid of ourselves of Class::Data::Inheritable because it clashes with Catalyst::Runtime 5.8.
+          Notably, it caused a strange bug in Rose::DBx::Garden::Catalyst where the MyApp->config
+          class hashref would get nuked after a call to Class::C3::initialize(). Yes. That fsked up.
+
+ 

@@ -1,16 +1,18 @@
 package CatalystX::CRUD::Object;
 use strict;
 use warnings;
-use base qw( Class::Accessor::Fast Class::Data::Inheritable CatalystX::CRUD );
+use Moose;
+with 'MooseX::Emulate::Class::Accessor::Fast';
+with 'Catalyst::ClassData';
+use base qw( CatalystX::CRUD );
 use Carp;
 use MRO::Compat;
 use mro 'c3';
-Class::C3::initialize();
 
 __PACKAGE__->mk_ro_accessors(qw( delegate ));
 __PACKAGE__->mk_classdata('delegate_class');
 
-our $VERSION = '0.42';
+our $VERSION = '0.43';
 
 =head1 NAME
 
@@ -142,8 +144,12 @@ sub can {
 
         # object method tries object_class first,
         # then the delegate().
-        return UNIVERSAL::can( ref($obj), $method )
-            || $obj->delegate->can( $method, @arg );
+        my $subref = UNIVERSAL::can( ref($obj), $method );
+        return $subref if $subref;
+        if ( defined $obj->delegate ) {
+            return $obj->delegate->can( $method, @arg );
+        }
+        return undef;
     }
     else {
 

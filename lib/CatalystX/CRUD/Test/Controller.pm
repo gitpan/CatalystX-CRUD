@@ -8,7 +8,7 @@ use mro 'c3';
 
 __PACKAGE__->mk_accessors( qw( form_fields ) );
 
-our $VERSION = '0.42';
+our $VERSION = '0.43';
 
 =head1 NAME
 

@@ -11,14 +11,14 @@ WriteMakefile(
     PREREQ_PM => {
         'Test::More' => 0,
         'Data::Pageset'    => 0,
-        'Class::Accessor::Fast' => 0,
-        'Class::Data::Inheritable' => 0,
-        'Catalyst::Runtime'     => 0,
+        'Catalyst::Runtime'     => 5.80003,
         'Catalyst::Component::ACCEPT_CONTEXT' => 0.06,
         'Catalyst::Exception'   => 0,
         'Path::Class::File'     => 0,
         'MRO::Compat'           => 0.10,
         'Class::C3'             => 0.20,
+        'Moose'                 => 0,  
+        'MooseX::Emulate::Class::Accessor::Fast' => 0,
         'Data::Dump'            => 0,  # for testing
         'Sort::SQL'             => 0.03,
         'Search::QueryParser::SQL' => 0.005,

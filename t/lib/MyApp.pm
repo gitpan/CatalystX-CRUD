@@ -6,9 +6,16 @@ use Data::Dump qw( dump );
 
 our $VERSION = '0.04';
 
+__PACKAGE__->config( foo => 'bar' );
+__PACKAGE__->config->{bad} = 'juju';
+
 __PACKAGE__->setup();
 
+#warn dump MyApp->config;
+
 Class::C3::initialize();    # for REST
+
+#warn dump MyApp->config;
 
 my @temp_files;
 
