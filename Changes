@@ -213,4 +213,10 @@ Revision history for CatalystX-CRUD
           Notably, it caused a strange bug in Rose::DBx::Garden::Catalyst where the MyApp->config
           class hashref would get nuked after a call to Class::C3::initialize(). Yes. That fsked up.
 
- 
+0.44    23 May 2009
+        * check for symlink() support in Model::File at compile time and return from rm_related()
+          if not supported. Fixes spurious test breakage on Win32.
+          See https://rt.cpan.org/Ticket/Display.html?id=46314
+
+
+        

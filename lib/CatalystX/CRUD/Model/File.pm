@@ -10,7 +10,10 @@ use mro 'c3';
 
 __PACKAGE__->mk_accessors(qw( inc_path ));
 
-our $VERSION = '0.43';
+our $VERSION = '0.44';
+
+# test whether symlink() works at compile time
+my $SYMLINK_SUPPORTED = eval { symlink("",""); 1 };
 
 =head1 NAME
 
@@ -238,6 +241,13 @@ to the Catalyst log.
 
 sub add_related {
     my ( $self, $file, $rel_name, $other_file_name ) = @_;
+
+    if (!$SYMLINK_SUPPORTED) {
+        $self->context->log->error(
+                "symlink() is not supported on this system");
+        return;
+    }
+
     my $other_file = $self->fetch( file => $other_file_name );
 
     unless ( -r $other_file ) {
@@ -252,28 +262,10 @@ sub add_related {
         }
 
         # if not, create symlink
-        # wrap in eval since win32 (others?) do not support symlink
         my $link = $self->object_class->delegate_class->new( $file->dir,
             $other_file->basename );
-        my $success = 1;
-        my $symlink_supported
-            = eval { $success = symlink( "$file", "$link" ); 1 };
-        if ($symlink_supported) {
-            if ( !$success ) {
-                $self->throw_error("failed to symlink $link => $file: $@");
-            }
-            else {
-                return 1;
-            }
-        }
-        else {
-
-            # symlink() is not supported on this system.
-            # we do not throw_error because that will cause
-            # tests to fail unnecessarily.
-            # however, we need to signal the problem somehow.
-            $self->context->log->error(
-                "symlink() is not supported on this system");
+        if (!symlink( "$file", "$link" )) {
+            $self->throw_error("failed to symlink $link => $file: $@");
         }
 
     }
@@ -287,6 +279,9 @@ sub add_related {
 For I<rel_name> of "dir" will create a symlink for I<other_file_name>'s
 basename to I<file> in the same directory as I<file>.
 
+If the symlink() function is not supported, will log an error and return
+without doing anything.
+
 If the symlink represented by I<other_file_name> does not exist
 or is not a symlink, will throw an error.
 
@@ -296,6 +291,12 @@ If the unlink fails will also throw an error.
 
 sub rm_related {
     my ( $self, $file, $rel_name, $other_file_name ) = @_;
+
+    if (!$SYMLINK_SUPPORTED) {
+        $self->context->log->error(
+                "symlink() is not supported on this system");
+        return; 
+    }
 
     my $other_file = $self->fetch( file => $other_file_name );
 
