@@ -9,7 +9,7 @@ use Carp;
 
 __PACKAGE__->mk_accessors(qw( use_ilike ne_sign ));
 
-our $VERSION = '0.44';
+our $VERSION = '0.45';
 
 =head1 NAME
 
@@ -171,7 +171,7 @@ sub make_sql_query {
     my $p2q    = $self->params_to_sql_query($field_names);
     my $params = $c->req->params;
     my $sp     = Sort::SQL->string2array( $self->_which_sort($c) );
-    my $s      = join( ' ', map {%$_} @$sp );
+    my $s      = join( ', ', map { join( ' ', %$_ ) } @$sp );
     my $offset = $params->{'cxc-offset'} || $params->{'_offset'};
     my $page_size 
         = $params->{'cxc-page_size'}

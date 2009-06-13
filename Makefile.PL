@@ -20,7 +20,7 @@ WriteMakefile(
         'Moose'                 => 0,  
         'MooseX::Emulate::Class::Accessor::Fast' => 0,
         'Data::Dump'            => 0,  # for testing
-        'Sort::SQL'             => 0.03,
+        'Sort::SQL'             => 0.04,
         'Search::QueryParser::SQL' => 0.005,
 
     },

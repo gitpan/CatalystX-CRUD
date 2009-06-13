@@ -1,6 +1,6 @@
 --- #YAML:1.0
 name:               CatalystX-CRUD
-version:            0.44
+version:            0.45
 abstract:           CRUD framework for Catalyst applications
 author:
     - Peter Karman <perl@peknet.com>
@@ -22,7 +22,7 @@ requires:
     MRO::Compat:          0.1
     Path::Class::File:    0
     Search::QueryParser::SQL:  0.005
-    Sort::SQL:            0.03
+    Sort::SQL:            0.04
     Test::More:           0
 no_index:
     directory:

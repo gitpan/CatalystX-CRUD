@@ -218,5 +218,6 @@ Revision history for CatalystX-CRUD
           if not supported. Fixes spurious test breakage on Win32.
           See https://rt.cpan.org/Ticket/Display.html?id=46314
 
-
-        
+0.45    13 June 2009
+        * fix multi-column sort via cxc-order param (requires Sort::SQL 0.04)
+ 
