@@ -25,6 +25,7 @@ t/03-rest.t
 t/04-query.t
 t/boilerplate.t
 t/lib/MyApp.pm
+t/lib/MyApp/Controller/Root.pm
 t/lib/MyApp/Controller/File.pm
 t/lib/MyApp/Controller/FileAdapter.pm
 t/lib/MyApp/Controller/FetchRewrite.pm

@@ -10,10 +10,10 @@ use mro 'c3';
 
 __PACKAGE__->mk_accessors(qw( inc_path ));
 
-our $VERSION = '0.45';
+our $VERSION = '0.46';
 
 # test whether symlink() works at compile time
-my $SYMLINK_SUPPORTED = eval { symlink("",""); 1 };
+my $SYMLINK_SUPPORTED = eval { symlink( "", "" ); 1 };
 
 =head1 NAME
 
@@ -169,7 +169,7 @@ sub _find {
         {   follow => 1,
             wanted => $find_sub,
         },
-        @{ $self->inc_path }
+        $root
     );
     return \%files;
 }
@@ -185,6 +185,7 @@ sub search {
                 file     => $relative,
                 delegate => $files->{$relative}
             );
+            $obj->read;    # just like fetch()
             push @objects, $obj;
         }
     }
@@ -242,9 +243,9 @@ to the Catalyst log.
 sub add_related {
     my ( $self, $file, $rel_name, $other_file_name ) = @_;
 
-    if (!$SYMLINK_SUPPORTED) {
+    if ( !$SYMLINK_SUPPORTED ) {
         $self->context->log->error(
-                "symlink() is not supported on this system");
+            "symlink() is not supported on this system");
         return;
     }
 
@@ -264,7 +265,7 @@ sub add_related {
         # if not, create symlink
         my $link = $self->object_class->delegate_class->new( $file->dir,
             $other_file->basename );
-        if (!symlink( "$file", "$link" )) {
+        if ( !symlink( "$file", "$link" ) ) {
             $self->throw_error("failed to symlink $link => $file: $@");
         }
 
@@ -292,10 +293,10 @@ If the unlink fails will also throw an error.
 sub rm_related {
     my ( $self, $file, $rel_name, $other_file_name ) = @_;
 
-    if (!$SYMLINK_SUPPORTED) {
+    if ( !$SYMLINK_SUPPORTED ) {
         $self->context->log->error(
-                "symlink() is not supported on this system");
-        return; 
+            "symlink() is not supported on this system");
+        return;
     }
 
     my $other_file = $self->fetch( file => $other_file_name );

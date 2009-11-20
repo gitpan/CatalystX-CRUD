@@ -12,7 +12,7 @@ use mro 'c3';
 __PACKAGE__->mk_ro_accessors(qw( delegate ));
 __PACKAGE__->mk_classdata('delegate_class');
 
-our $VERSION = '0.45';
+our $VERSION = '0.46';
 
 =head1 NAME
 

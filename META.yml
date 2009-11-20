@@ -1,6 +1,6 @@
 --- #YAML:1.0
 name:               CatalystX-CRUD
-version:            0.45
+version:            0.46
 abstract:           CRUD framework for Catalyst applications
 author:
     - Peter Karman <perl@peknet.com>
@@ -22,13 +22,13 @@ requires:
     MRO::Compat:          0.1
     Path::Class::File:    0
     Search::QueryParser::SQL:  0.005
-    Sort::SQL:            0.04
+    Sort::SQL:            0.07
     Test::More:           0
 no_index:
     directory:
         - t
         - inc
-generated_by:       ExtUtils::MakeMaker version 6.50
+generated_by:       ExtUtils::MakeMaker version 6.54
 meta-spec:
     url:      http://module-build.sourceforge.net/META-spec-v1.4.html
     version:  1.4
