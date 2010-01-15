@@ -37,7 +37,7 @@ __PACKAGE__->config(
     naked_results         => 0,
 );
 
-our $VERSION = '0.46';
+our $VERSION = '0.47';
 
 =head1 NAME
 
@@ -143,7 +143,25 @@ sub fetch : Chained('/') PathPrefix CaptureArgs(1) {
     my ( $self, $c, $id ) = @_;
     $c->stash->{object_id} = $id;
     my @pk = $self->get_primary_key( $c, $id );
-    my @arg = $id ? (@pk) : ();
+
+    # make sure all elements of the @pk pairs are not-null
+    if ( scalar(@pk) % 2 ) {
+        $self->throw_error(
+            "Odd number of elements returned from get_primary_key()");
+    }
+    my %pk_pairs = @pk;
+    my $pk_is_null;
+    for my $key ( keys %pk_pairs ) {
+        my $val = $pk_pairs{$key};
+        if ( !defined($val) or !length($val) ) {
+            $pk_is_null = $key;
+            last;
+        }
+    }
+    if ( $c->debug and defined $pk_is_null ) {
+        $c->log->debug("Null PK value for '$pk_is_null'");
+    }
+    my @arg = defined $pk_is_null ? () : (@pk);
     $c->log->debug( "fetch: " . dump \@arg ) if $c->debug;
     $c->stash->{object} = $self->do_model( $c, 'fetch', @arg );
     if ( $self->has_errors($c) or !$c->stash->{object} ) {

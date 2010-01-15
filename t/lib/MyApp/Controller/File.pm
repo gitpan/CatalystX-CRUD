@@ -7,7 +7,6 @@ use File::Temp;
 use MyApp::Form;
 
 __PACKAGE__->config(
-    primary_key           => 'absolute',
     form_class            => 'MyApp::Form',
     form_fields           => [qw( file content )],
     model_name            => 'File',

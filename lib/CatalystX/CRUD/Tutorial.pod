@@ -151,7 +151,7 @@ respectively.
     primary_key_columns => ['id'],
     relationships => [
         albums => {
-                   map_class => 'CatRose::AlbumSong',
+                   map_class => 'MyCRUD::AlbumSong',
                    type      => 'many to many',
                   },
 
@@ -174,7 +174,7 @@ respectively.
     primary_key_columns => ['id'],
     relationships => [
         songs => {
-                  map_class => 'CatRose::AlbumSong',
+                  map_class => 'MyCRUD::AlbumSong',
                   type      => 'many to many',
                  },
 
@@ -195,8 +195,8 @@ respectively.
                 song_id  => {type => 'integer', not_null => 1}
                ],
     foreign_keys => [
-        song  => {class => 'CatRose::Song',  key_columns => {song_id  => 'id'}},
-        album => {class => 'CatRose::Album', key_columns => {album_id => 'id'}}
+        song  => {class => 'MyCRUD::Song',  key_columns => {song_id  => 'id'}},
+        album => {class => 'MyCRUD::Album', key_columns => {album_id => 'id'}}
                     ]
 
  );

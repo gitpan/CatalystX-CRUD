@@ -23,11 +23,13 @@ t/01-file.t
 t/02-controller.t
 t/03-rest.t
 t/04-query.t
+t/05-pks.t
 t/boilerplate.t
 t/lib/MyApp.pm
 t/lib/MyApp/Controller/Root.pm
 t/lib/MyApp/Controller/File.pm
 t/lib/MyApp/Controller/FileAdapter.pm
+t/lib/MyApp/Controller/FileAdapterMultiPK.pm
 t/lib/MyApp/Controller/FetchRewrite.pm
 t/lib/MyApp/Controller/REST/File.pm
 t/lib/MyApp/Controller/Search.pm
