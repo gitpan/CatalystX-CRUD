@@ -9,7 +9,7 @@ use Carp;
 
 __PACKAGE__->mk_accessors(qw( use_ilike ne_sign ));
 
-our $VERSION = '0.47';
+our $VERSION = '0.48';
 
 =head1 NAME
 

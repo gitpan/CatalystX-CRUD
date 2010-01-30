@@ -16,7 +16,6 @@ WriteMakefile(
         'Catalyst::Exception'   => 0,
         'Path::Class::File'     => 0,
         'MRO::Compat'           => 0.10,
-        'Class::C3'             => 0.20,
         'Moose'                 => 0,  
         'MooseX::Emulate::Class::Accessor::Fast' => 0,
         'Data::Dump'            => 0,  # for testing

@@ -37,7 +37,7 @@ __PACKAGE__->config(
     naked_results         => 0,
 );
 
-our $VERSION = '0.47';
+our $VERSION = '0.48';
 
 =head1 NAME
 
@@ -161,7 +161,7 @@ sub fetch : Chained('/') PathPrefix CaptureArgs(1) {
     if ( $c->debug and defined $pk_is_null ) {
         $c->log->debug("Null PK value for '$pk_is_null'");
     }
-    my @arg = defined $pk_is_null ? () : (@pk);
+    my @arg = ( defined $pk_is_null || !$id ) ? () : (@pk);
     $c->log->debug( "fetch: " . dump \@arg ) if $c->debug;
     $c->stash->{object} = $self->do_model( $c, 'fetch', @arg );
     if ( $self->has_errors($c) or !$c->stash->{object} ) {

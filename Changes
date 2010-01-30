@@ -232,3 +232,6 @@ Revision history for CatalystX-CRUD
         * fix bug in base Controller->fetch() where multiple PKs where one value is null were slipping
           through. Reported by Adam Mackler.
 
+0.48    29 Jan 2009
+        * fix bug with create() introduced in 0.47.
+        * remove explicit dep on Class::C3 per RT54097
