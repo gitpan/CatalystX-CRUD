@@ -235,3 +235,8 @@ Revision history for CatalystX-CRUD
 0.48    29 Jan 2009
         * fix bug with create() introduced in 0.47.
         * remove explicit dep on Class::C3 per RT54097
+
+0.49    11 April 2010
+        * uri_for_view_on_single_result() will return uri for 'view' action,
+          regardless of value of can_write().
+

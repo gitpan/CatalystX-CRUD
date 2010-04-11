@@ -37,7 +37,7 @@ __PACKAGE__->config(
     naked_results         => 0,
 );
 
-our $VERSION = '0.48';
+our $VERSION = '0.49';
 
 =head1 NAME
 
@@ -851,7 +851,7 @@ sub postcommit {
 Returns 0 unless view_on_single_result returns true.
 
 Otherwise, calls the primary_key() value on the first object
-in I<results> and constructs a uri_for() value to the edit()
+in I<results> and constructs a uri_for() value to the 'view'
 action in the same class as the current action.
 
 =cut
@@ -866,10 +866,9 @@ sub uri_for_view_on_single_result {
 
     my $id = $self->make_primary_key_string($obj);
 
-    # the append . '' is to force stringify anything
-    # that might be an object with overloading. Otherwise
-    # uri_for() assumes it is an Action object.
-    return $c->uri_for( $id . '', $self->can_write($c) ? 'edit' : 'view' );
+    # force stringify $id in case it is an object.
+    # Otherwise uri_for() assumes it is an Action object.
+    return $c->uri_for( "$id", 'view' );
 }
 
 =head2 make_query( I<context>, I<arg> )
