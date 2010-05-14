@@ -240,3 +240,5 @@ Revision history for CatalystX-CRUD
         * uri_for_view_on_single_result() will return uri for 'view' action,
           regardless of value of can_write().
 
+0.50    13 May 2010
+        * fix make_primary_key_string() to get rid of bad sprintf() call

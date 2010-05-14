@@ -37,7 +37,7 @@ __PACKAGE__->config(
     naked_results         => 0,
 );
 
-our $VERSION = '0.49';
+our $VERSION = '0.50';
 
 =head1 NAME
 
@@ -242,7 +242,7 @@ sub make_primary_key_string {
         for my $field (@$pk) {
             my $v = scalar $obj->$field;
             $v = '' unless defined $v;
-            $v =~ s/;/ sprintf( "%%%02X", ';' ) /eg;
+            $v =~ s/;/\%3b/g;
             push( @vals, $v );
         }
 
