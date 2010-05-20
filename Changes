@@ -242,3 +242,8 @@ Revision history for CatalystX-CRUD
 
 0.50    13 May 2010
         * fix make_primary_key_string() to get rid of bad sprintf() call
+
+0.51    19 May 2010
+        * added use_request_uri_for_path to test MyApp to fix 
+          test failures with Catalyst::Runtime 5.80024
+

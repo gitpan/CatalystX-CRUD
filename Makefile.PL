@@ -11,7 +11,7 @@ WriteMakefile(
     PREREQ_PM => {
         'Test::More' => 0,
         'Data::Pageset'    => 0,
-        'Catalyst::Runtime'     => 5.80003,
+        'Catalyst::Runtime'     => 5.80024,
         'Catalyst::Component::ACCEPT_CONTEXT' => 0.06,
         'Catalyst::Exception'   => 0,
         'Path::Class::File'     => 0,

@@ -8,6 +8,7 @@ our $VERSION = '0.04';
 
 __PACKAGE__->config( foo => 'bar' );
 __PACKAGE__->config->{bad} = 'juju';
+__PACKAGE__->config(use_request_uri_for_path => 1);
 
 __PACKAGE__->setup();
 
