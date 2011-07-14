@@ -60,7 +60,7 @@ is( $res->content,
     "POST new file2 response"
 );
 
-is( $res->headers->{status}, 302, "new file 302 redirect status" );
+is( $res->code, 302, "new file 302 redirect status" );
 
 ###################################################
 # test with no args
@@ -68,7 +68,7 @@ is( $res->headers->{status}, 302, "new file 302 redirect status" );
 #system("tree t/lib/MyApp/root");
 
 ok( $res = request('/rest/file'), "/ request with multiple items" );
-is( $res->headers->{status}, 200, "/ request with multiple items lists" );
+is( $res->code, 200, "/ request with multiple items lists" );
 ok( $res->content =~ qr/foo bar baz/ && $res->content =~ qr/hello world/,
     "content has 2 files" );
 
@@ -76,28 +76,27 @@ ok( $res->content =~ qr/foo bar baz/ && $res->content =~ qr/hello world/,
 # test the Arg matching with no rpc
 
 ok( $res = request('/rest/file/create'), "/rest/file/create" );
-is( $res->headers->{status}, 302, "/rest/file/create" );
+is( $res->code, 302, "/rest/file/create" );
 ok( $res = request('/rest/file'), "zero" );
-is( $res->headers->{status}, 200, "zero => list()" );
+is( $res->code, 200, "zero => list()" );
 ok( $res = request('/rest/file/testfile'), "one" );
-is( $res->headers->{status}, 200, "oid == one" );
+is( $res->code, 200, "oid == one" );
 ok( $res = request('/rest/file/testfile/view'), "view" );
-is( $res->headers->{status}, 404, "rpc == two" );
+is( $res->code, 404, "rpc == two" );
 ok( $res
         = request(
         POST( '/rest/file/testfile/dir/otherdir%2ftestfile2', [] ) ),
     "three"
 );
-is( $res->headers->{status}, 204, "related == three" );
+is( $res->code, 204, "related == three" );
 ok( $res = request(
         POST( '/rest/file/testfile/dir/otherdir%2ftestfile2/rpc', [] )
     ),
     "four"
 );
-is( $res->headers->{status},
-    404, "404 == related rpc with no enable_rpc_compat" );
+is( $res->code, 404, "404 == related rpc with no enable_rpc_compat" );
 ok( $res = request('/rest/file/testfile/two/three/four/five'), "five" );
-is( $res->headers->{status}, 404, "404 == five" );
+is( $res->code, 404, "404 == five" );
 ok( $res = request(
         POST(
             '/rest/file/testfile/dir/otherdir%2ftestfile2',
@@ -106,36 +105,35 @@ ok( $res = request(
     ),
     "three"
 );
-is( $res->headers->{status}, 204, "related == three" );
+is( $res->code, 204, "related == three" );
 
 # turn rpc enable on and run again
 MyApp->controller('REST::File')->enable_rpc_compat(1);
 
 ok( $res = request('/rest/file/create'), "/rest/file/create" );
-is( $res->headers->{status}, 302, "/rest/file/create" );
+is( $res->code, 302, "/rest/file/create" );
 ok( $res = request('/rest/file'), "zero with rpc" );
-is( $res->headers->{status}, 200, "zero with rpc => list()" );
+is( $res->code, 200, "zero with rpc => list()" );
 ok( $res = request('/rest/file/testfile'), "one with rpc" );
-is( $res->headers->{status}, 200, "oid == one with rpc" );
+is( $res->code, 200, "oid == one with rpc" );
 ok( $res = request('/rest/file/testfile/view'), "view with rpc" );
-is( $res->headers->{status}, 200, "rpc == two with rpc" );
+is( $res->code, 200, "rpc == two with rpc" );
 ok( $res = request(
         POST( '/rest/file/testfile/dir/otherdir%2ftestfile2/add', [] )
     ),
     "three with rpc"
 );
-is( $res->headers->{status}, 204, "related == three with rpc" );
+is( $res->code, 204, "related == three with rpc" );
 ok( $res = request(
         POST( '/rest/file/testfile/dir/otherdir%2ftestfile2/rpc', [] )
     ),
     "four"
 );
-is( $res->headers->{status},
-    404, "404 == related rpc with enable_rpc_compat" );
+is( $res->code, 404, "404 == related rpc with enable_rpc_compat" );
 
 ok( $res = request('/rest/file/testfile/two/three/four/five'),
     "five with rpc" );
-is( $res->headers->{status}, 404, "404 == five with rpc" );
+is( $res->code, 404, "404 == five with rpc" );
 
 ok( $res = request(
         POST(
@@ -145,7 +143,7 @@ ok( $res = request(
     ),
     "three with rpc"
 );
-is( $res->headers->{status}, 204, "related == three with rpc" );
+is( $res->code, 204, "related == three with rpc" );
 
 # delete the file
 
@@ -183,5 +181,5 @@ like( $res->content, qr/content => undef/, "file nuked" );
 ok( $res = request('/rest/file'), "/ request with no items" );
 
 #dump $res;
-is( $res->headers->{status}, 200, "/ request with no items == 200" );
+is( $res->code, 200, "/ request with no items == 200" );
 is( $res->content, "", "no content for no results" );

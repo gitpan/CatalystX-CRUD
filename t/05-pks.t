@@ -13,4 +13,4 @@ ok( $res = request(
     "GET new file with null pk"
 );
 
-is( $res->headers->{status}, 500, "exception thrown" );
+is( $res->code, 500, "exception thrown" );

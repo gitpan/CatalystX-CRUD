@@ -12,7 +12,7 @@ ok( my $res = request('/search/search'), "response for /search/search" );
 
 #dump( $response->headers );
 
-is( $res->headers->{status}, '200', "response Ok" );
+is( $res->code, '200', "response Ok" );
 
 ok( $res = request('/search/search?file=bar'), "?file=bar" );
 

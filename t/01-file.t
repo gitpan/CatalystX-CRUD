@@ -14,9 +14,9 @@ ok( get('/foo'), "get /foo" );
 
 ok( my $response = request('/file/search'), "response for /file/search" );
 
-#dump( $response->headers );
+#dump( $response );
 
-is( $response->headers->{status}, '302', "response was redirect" );
+is( $response->code, '302', "/file/search response was redirect" );
 
 ok( get('/autoload'), "get /autoload" );
 
@@ -37,7 +37,7 @@ is( $res->content,
     "POST new file response"
 );
 
-is( $res->headers->{status}, 302, "new file 302 redirect status" );
+is( $res->code, 302, "new file 302 redirect status" );
 
 # read the file we just created
 ok( $res = request( HTTP::Request->new( GET => '/file/testfile/view' ) ),
@@ -59,7 +59,7 @@ like( $res->content, qr/content => "foo bar baz"/, "update file" );
 # test for default()
 ok( $res = request('/file/testfile'), "get /file/testfile" );
 
-is( $res->headers->{status}, 404, "default is 404" );
+is( $res->code, 404, "default is 404" );
 
 # create related file
 ok( $res = request(
@@ -76,7 +76,7 @@ is( $res->content,
     "POST new file2 response"
 );
 
-is( $res->headers->{status}, 302, "new file 302 redirect status" );
+is( $res->code, 302, "new file 302 redirect status" );
 
 # create relationship
 ok( $res
@@ -87,7 +87,7 @@ ok( $res
 
 #dump $res;
 
-is( $res->headers->{status}, 204, "relationship created with status 204" );
+is( $res->code, 204, "relationship created with status 204" );
 
 # remove the relationship
 
@@ -97,7 +97,7 @@ ok( $res = request(
     "remove related dir/testfile2"
 );
 
-is( $res->headers->{status}, 204, "relationship removed with status 204" );
+is( $res->code, 204, "relationship removed with status 204" );
 
 # delete the file
 

@@ -129,6 +129,8 @@ we'll create C<lib/MyCRUD/RDBO.pm> and then inherit from it:
     return MyCRUD::DB->new_or_cached(@_, database => $ENV{DB_PATH});
  }
 
+ 1;
+
 Note that the new_or_cached() method is relatively new to Rose::DB, so make sure you have
 the latest version from CPAN.
 
