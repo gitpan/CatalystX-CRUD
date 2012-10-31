@@ -10,7 +10,7 @@ use mro 'c3';
 
 __PACKAGE__->mk_accessors(qw( inc_path ));
 
-our $VERSION = '0.52';
+our $VERSION = '0.53';
 
 # test whether symlink() works at compile time
 my $SYMLINK_SUPPORTED = eval { symlink( "", "" ); 1 };
@@ -222,6 +222,25 @@ sub iterator {
     my $self  = shift;
     my $files = $self->search(@_);
     return CatalystX::CRUD::Iterator::File->new($files);
+}
+
+=head2 iterator_related( I<file>, I<rel_name> )
+
+Required method. Acts like iterator() for I<rel_name>.
+
+=cut
+
+sub iterator_related {
+    my $self     = shift;
+    my $file     = shift or $self->throw_error('file required');
+    my $rel_name = shift or $self->throw_error('rel_name required');
+    if ( $rel_name eq 'dir' ) {
+        my $files = $self->search(@_);
+        return CatalystX::CRUD::Iterator::File->new($files);
+    }
+    else {
+        $self->throw_error("unsupported relationship name: $rel_name");
+    }
 }
 
 =head2 add_related( I<file>, I<rel_name>, I<other_file_name> )

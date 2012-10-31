@@ -251,3 +251,6 @@ Revision history for CatalystX-CRUD
         * doc fix in Tutorial via RT#68499
         * tests fixed for RT#68779
 
+0.53    31 Oct 2012
+        * add list_related and view_related primarily for REST support
+

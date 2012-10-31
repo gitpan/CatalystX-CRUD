@@ -1,33 +1,33 @@
---- #YAML:1.0
-name:               CatalystX-CRUD
-version:            0.52
-abstract:           CRUD framework for Catalyst applications
+---
+abstract: 'CRUD framework for Catalyst applications'
 author:
-    - Peter Karman <perl@peknet.com>
-license:            unknown
-distribution_type:  module
-configure_requires:
-    ExtUtils::MakeMaker:  0
+  - 'Peter Karman <perl@peknet.com>'
 build_requires:
-    ExtUtils::MakeMaker:  0
-requires:
-    Catalyst::Component::ACCEPT_CONTEXT:  0.06
-    Catalyst::Exception:  0
-    Catalyst::Runtime:    5.80024
-    Data::Dump:           0
-    Data::Pageset:        0
-    Moose:                0
-    MooseX::Emulate::Class::Accessor::Fast:  0
-    MRO::Compat:          0.1
-    Path::Class::File:    0
-    Search::QueryParser::SQL:  0.005
-    Sort::SQL:            0.07
-    Test::More:           0
-no_index:
-    directory:
-        - t
-        - inc
-generated_by:       ExtUtils::MakeMaker version 6.54
+  ExtUtils::MakeMaker: 0
+configure_requires:
+  ExtUtils::MakeMaker: 0
+dynamic_config: 1
+generated_by: 'ExtUtils::MakeMaker version 6.62, CPAN::Meta::Converter version 2.112150'
+license: unknown
 meta-spec:
-    url:      http://module-build.sourceforge.net/META-spec-v1.4.html
-    version:  1.4
+  url: http://module-build.sourceforge.net/META-spec-v1.4.html
+  version: 1.4
+name: CatalystX-CRUD
+no_index:
+  directory:
+    - t
+    - inc
+requires:
+  Catalyst::Component::ACCEPT_CONTEXT: 0.06
+  Catalyst::Exception: 0
+  Catalyst::Runtime: 5.80024
+  Data::Dump: 0
+  Data::Pageset: 0
+  MRO::Compat: 0.1
+  Moose: 0
+  MooseX::Emulate::Class::Accessor::Fast: 0
+  Path::Class::File: 0
+  Search::QueryParser::SQL: 0.005
+  Sort::SQL: 0.07
+  Test::More: 0
+version: 0.53

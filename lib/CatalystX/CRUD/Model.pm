@@ -9,7 +9,7 @@ use base qw(
     Catalyst::Model
 );
 
-our $VERSION = '0.52';
+our $VERSION = '0.53';
 
 __PACKAGE__->mk_accessors(qw( object_class page_size ));
 
@@ -260,6 +260,11 @@ It is up to the subclass to implement this method.
 
 remove_related() is an alias for rm_related().
 
+=item find_related( I<obj>, I<rel_name>, I<foreign_value> )
+
+Return related object for I<foreign_value> based on I<rel_name>
+for I<obj>.
+
 =item has_relationship( I<obj>, I<rel_name> )
 
 Should return true or false as to whether I<rel_name> exists for
@@ -275,6 +280,7 @@ sub make_query  { shift->throw_error("must implement make_query()") }
 sub add_related { shift->throw_error("must implement add_related()") }
 sub rm_related  { shift->throw_error("must implement rm_related()") }
 *remove_related = \&rm_related;
+sub find_related { shift->throw_error("must implement view_related()") }
 
 sub has_relationship {
     shift->throw_error("must implement has_relationship()");

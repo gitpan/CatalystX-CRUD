@@ -37,7 +37,7 @@ __PACKAGE__->config(
     naked_results         => 0,
 );
 
-our $VERSION = '0.52';
+our $VERSION = '0.53';
 
 =head1 NAME
 
@@ -51,18 +51,18 @@ CatalystX::CRUD::Controller - base class for CRUD controllers
     use base qw( CatalystX::CRUD::Controller );
     
     __PACKAGE__->config(
-            form_class              => 'MyForm::Foo',
-            init_form               => 'init_with_foo',
-            init_object             => 'foo_from_form',
-            default_template        => 'path/to/foo/edit.tt',
-            model_name              => 'Foo',
-            model_adapter           => 'FooAdapter', # optional
-            model_meta              => { moniker => 'SomeTable' },  # optional
-            primary_key             => 'id',
-            view_on_single_result   => 0,
-            page_size               => 50,
-            allow_GET_writes        => 0,
-            naked_results           => 0,
+        form_class              => 'MyForm::Foo',
+        init_form               => 'init_with_foo',
+        init_object             => 'foo_from_form',
+        default_template        => 'path/to/foo/edit.tt',
+        model_name              => 'Foo',
+        model_adapter           => 'FooAdapter', # optional
+        model_meta              => { moniker => 'SomeTable' },  # optional
+        primary_key             => 'id',
+        view_on_single_result   => 0,
+        page_size               => 50,
+        allow_GET_writes        => 0,
+        naked_results           => 0,
     );
                     
     1;
@@ -73,6 +73,8 @@ CatalystX::CRUD::Controller - base class for CRUD controllers
     #  foo/<pk>/view
     #  foo/<pk>/save
     #  foo/<pk>/rm
+    #  foo/<pk>/<relname>/<pk2>/add
+    #  foo/<pk>/<relname>/<pk2>/rm
     #  foo/create
     #  foo/list
     #  foo/search
@@ -579,14 +581,6 @@ sub related : PathPart('') Chained('fetch') CaptureArgs(2) {
         $self->throw_error('Permission denied');
         return;
     }
-    if ( !$self->allow_GET_writes ) {
-        if ( uc( $c->req->method ) ne 'POST' ) {
-            $c->res->status(400);
-            $c->res->body('GET request not allowed');
-            $c->stash->{error} = 1;    # so has_errors() will return true
-            return;
-        }
-    }
     $c->stash( rel_name         => $rel );
     $c->stash( foreign_pk_value => $fpk_value );
 }
@@ -609,8 +603,24 @@ on success.
 
 =cut
 
+sub _check_idempotent {
+    my ( $self, $c ) = @_;
+    if ( !$self->allow_GET_writes ) {
+        if ( uc( $c->req->method ) ne 'POST' ) {
+            $c->log->warn( "allow_GET_writes!=true, related method="
+                    . uc( $c->req->method ) );
+            $c->res->status(405);
+            $c->res->header( 'Allow' => 'POST' );
+            $c->res->body('GET request not allowed');
+            $c->stash->{error} = 1;    # so has_errors() will return true
+            return;
+        }
+    }
+}
+
 sub remove : PathPart Chained('related') Args(0) {
     my ( $self, $c ) = @_;
+    $self->_check_idempotent($c);
     return if $self->has_errors($c);
     $self->do_model(
         $c, 'rm_related', $c->stash->{object},
@@ -641,6 +651,7 @@ on success.
 
 sub add : PathPart Chained('related') Args(0) {
     my ( $self, $c ) = @_;
+    $self->_check_idempotent($c);
     return if $self->has_errors($c);
     $self->do_model(
         $c, 'add_related', $c->stash->{object},
@@ -648,6 +659,77 @@ sub add : PathPart Chained('related') Args(0) {
         $c->stash->{foreign_pk_value}
     );
     $c->res->status(204);    # enacted, no content
+}
+
+=head2 fetch_related
+
+Attribute: chained to fetch() like related() is.
+
+=cut
+
+sub fetch_related : PathPart('') Chained('fetch') CaptureArgs(1) {
+    my ( $self, $c, $rel ) = @_;
+    return if $self->has_errors($c);
+    $c->stash( rel_name => $rel );
+}
+
+=head2 list_related
+
+Attribute: chained to fetch_related().
+
+Returns list of related objects.
+
+Example:
+
+ http://yoururl/user/123/group/list
+
+will return groups related to user C<123>.
+
+=cut
+
+sub list_related : PathPart('list') Chained('fetch_related') Args(0) {
+    my ( $self, $c, $rel ) = @_;
+    unless ( $self->can_read($c) ) {
+        $self->throw_error('Permission denied');
+        return;
+    }
+    return if $self->has_errors($c);
+    $self->view($c);    # set form
+    my $results
+        = $self->do_model( $c, 'iterator_related', $c->stash->{object},
+        $c->stash->{rel_name},
+        );
+    $c->stash( results => $results );
+}
+
+=head2 view_related
+
+Attribute: chained to related().
+
+Returns list of related objects based on foreign key value.
+
+Example:
+
+ http://yoururl/user/123/group/456/view
+
+will return groups of pk C<456> related to user C<123>.
+
+=cut
+
+sub view_related : PathPart('view') Chained('related') Args(0) {
+    my ( $self, $c ) = @_;
+    unless ( $self->can_read($c) ) {
+        $self->throw_error('Permission denied');
+        return;
+    }
+    return if $self->has_errors($c);
+    $self->view($c);    # set form
+    my $result = $self->do_model(
+        $c, 'find_related', $c->stash->{object},
+        $c->stash->{rel_name},
+        $c->stash->{foreign_pk_value}
+    );
+    $c->stash( results => $result );
 }
 
 =head1 INTERNAL METHODS

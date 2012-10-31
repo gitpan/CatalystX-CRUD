@@ -10,7 +10,7 @@ use Data::Dump qw( dump );
 __PACKAGE__->mk_accessors(qw( enable_rpc_compat ));
 __PACKAGE__->config( enable_rpc_compat => 0 );
 
-our $VERSION = '0.52';
+our $VERSION = '0.53';
 
 #warn "REST VERSION = $VERSION";
 
@@ -27,16 +27,16 @@ CatalystX::CRUD::REST - RESTful CRUD controller
     use MyForm::Foo;
     
     __PACKAGE__->config(
-                    form_class              => 'MyForm::Foo',
-                    init_form               => 'init_with_foo',
-                    init_object             => 'foo_from_form',
-                    default_template        => 'path/to/foo/edit.tt',
-                    model_name              => 'Foo',
-                    primary_key             => 'id',
-                    view_on_single_result   => 0,
-                    page_size               => 50,
-                    enable_rpc_compat       => 0,
-                    );
+        form_class              => 'MyForm::Foo',
+        init_form               => 'init_with_foo',
+        init_object             => 'foo_from_form',
+        default_template        => 'path/to/foo/edit.tt',
+        model_name              => 'Foo',
+        primary_key             => 'id',
+        view_on_single_result   => 0,
+        page_size               => 50,
+        enable_rpc_compat       => 0,
+    );
                     
     1;
     
@@ -71,9 +71,9 @@ MyApp.pm file, just after the setup() call:
 
  __PACKAGE__->setup();
  
- # add these 2 lines
+ # add these 3 lines
  use MRO::Compat;
-use mro 'c3';
+ use mro 'c3';
  Class::C3::initialize();
 
 This is required for Class::C3 to resolve the inheritance chain correctly,
@@ -138,7 +138,8 @@ my %http_method_map = (
 
 my %rpc_methods
     = map { $_ => 1 } qw( create read update delete edit save rm view );
-my %related_methods = map { $_ => 1 } qw( add remove );
+my %related_methods
+    = map { $_ => 1 } qw( add remove list_related view_related view );
 
 sub rest : Path {
     my ( $self, $c, @arg ) = @_;
@@ -154,6 +155,7 @@ sub rest : Path {
     $c->log->debug( "rpc compat mode = " . $self->enable_rpc_compat )
         if $c->debug;
     $c->log->debug( "rest args : " . dump \@arg ) if $c->debug;
+    $c->log->debug( "rest action->name=" . $c->action->name ) if $c->debug;
 
     my $n = scalar @arg;
     if ( $n <= 2 ) {
@@ -195,27 +197,47 @@ sub _rest_related {
     my ( $oid, $rel_name, $fval, $rpc ) = @arg;
 
     $c->log->debug("rest_related OID: $oid") if $c->debug;
+    $c->log->debug("rest_related rel_name=$rel_name fval=$fval rpc=$rpc")
+        if $c->debug;
 
     if ($rpc) {
         if ( !$self->enable_rpc_compat or !exists $related_methods{$rpc} ) {
+            $c->log->debug("unmapped rpc:$rpc") if $c->debug;
             $self->_set_status_404($c);
             return;
         }
     }
 
-    my $http_method = $self->req_method($c);
-
-    $self->related( $c, $rel_name, $fval );
-
+    my $http_method     = $self->req_method($c);
+    my $dispatch_method = 'related';
     my $rpc_method;
     if ($rpc) {
         $rpc_method = $rpc;
+
+        # mimic PathPart
+        if ( $rpc_method eq 'view' ) {
+            $rpc_method = 'view_related';
+        }
     }
     elsif ( $http_method eq 'POST' or $http_method eq 'PUT' ) {
         $rpc_method = 'add';
     }
     elsif ( $http_method eq 'DELETE' ) {
         $rpc_method = 'remove';
+    }
+    elsif ( $http_method eq 'GET' ) {
+        if ( $fval eq 'list' ) {
+            $rpc_method      = 'list_related';
+            $dispatch_method = 'fetch_related';
+        }
+        elsif ($fval) {
+            $rpc_method = 'view_related';
+        }
+        else {
+            $c->res->status(400);
+            $c->res->body("Bad HTTP request for method $http_method");
+            return;
+        }
     }
     else {
 
@@ -225,7 +247,9 @@ sub _rest_related {
         $c->res->body("Bad HTTP request for method $http_method");
         return;
     }
-
+    $c->log->debug("rest dispatch: $dispatch_method( $rel_name, $fval )")
+        if $c->debug;
+    $self->$dispatch_method( $c, $rel_name, $fval );
     $self->_call_rpc_method_as_action( $c, $rpc_method, $oid );
 }
 
@@ -238,18 +262,33 @@ sub _rest {
     my $oid = shift @arg || '';
     my $rpc = shift @arg;
 
-    $c->log->debug("rest OID: $oid") if $c->debug;
+    my $http_method = $self->req_method($c);
+    $c->log->debug("rest OID:$oid  rpc:$rpc  http:$http_method")
+        if $c->debug;
 
-    if ($rpc) {
-        if ( !$self->enable_rpc_compat or !exists $rpc_methods{$rpc} ) {
+    if ( length $oid and $rpc ) {
+        if ( $self->enable_rpc_compat and exists $rpc_methods{$rpc} ) {
+
+            # do nothing - logic below
+        }
+        elsif ( $self->enable_rpc_compat and $http_method eq 'GET' ) {
+
+            # same logic as !length $oid below:
+            # assume that $rpc is a relationship name
+            # and a 'list' is being requested
+            $c->log->debug(
+                "GET request with OID and unknown rpc; assuming 'list_related'"
+            ) if $c->debug;
+            $self->fetch_related( $c, $rpc );
+            $rpc = 'list_related';
+        }
+        elsif ( !$self->enable_rpc_compat or !exists $rpc_methods{$rpc} ) {
             $self->_set_status_404($c);
             return;
         }
     }
 
-    my $method = $self->req_method($c);
-
-    if ( !length $oid && $method eq 'GET' ) {
+    if ( !length $oid and $http_method eq 'GET' ) {
         $c->log->debug("GET request with no OID") if $c->debug;
         $c->action->name('list');
         $c->action->reverse( join( '/', $c->action->namespace, 'list' ) );
@@ -257,11 +296,15 @@ sub _rest {
     }
 
     # what RPC-style method to call
-    my $rpc_method = defined($rpc) ? $rpc : $http_method_map{$method};
+    my $rpc_method = defined($rpc) ? $rpc : $http_method_map{$http_method};
 
     # backwards compat naming for RPC style
     if ( $rpc_method =~ m/^(create|edit)$/ ) {
         $rpc_method .= '_form';
+    }
+
+    if ( !$self->can($rpc_method) ) {
+        $c->log->warn("no such rpc method in class: $rpc_method");
     }
 
     $self->_call_rpc_method_as_action( $c, $rpc_method, $oid );
@@ -274,7 +317,7 @@ sub _call_rpc_method_as_action {
 
     my $http_method = $self->req_method($c);
 
-    $c->log->debug("$http_method -> $rpc_method") if $c->debug;
+    $c->log->debug("rpc: $http_method -> $rpc_method") if $c->debug;
 
     # so View::TT (others?) auto-template-deduction works just like RPC style
     $c->action->name($rpc_method);
@@ -355,6 +398,22 @@ Overrides base method to disable chaining.
 =cut
 
 sub add { shift->next::method(@_) }
+
+=head2 view_related( I<context> )
+
+Overrides base method to disable chaining.
+
+=cut
+
+sub view_related { shift->next::method(@_) }
+
+=head2 list_related( I<context> )
+
+Overrides base method to disable chaining.
+
+=cut
+
+sub list_related { shift->next::method(@_) }
 
 =head2 delete( I<context> )
 
