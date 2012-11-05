@@ -155,6 +155,17 @@ via the relationship I<rel_name>.
 
 It is up to the subclass to implement this method.
 
+=head2 put_related( I<obj>, I<rel_name>, I<foreign_value> )
+
+Create new related foreign object. Unlike add_related(),
+the foreign object need not already exist. put_related()
+should be idempotent.
+
+=head2 find_related( I<obj>, I<rel_name>, I<foreign_value> )
+
+Return related object for I<foreign_value> based on I<rel_name>
+for I<obj>.
+
 =head2 has_relationship( I<controller>, I<context>, I<obj>, I<rel_name> )
 
 Should return true or false as to whether I<rel_name> exists for
@@ -165,8 +176,10 @@ It is up to the subclass to implement this method.
 
 =cut
 
-sub add_related { shift->throw_error("must implement add_related()") }
-sub rm_related  { shift->throw_error("must implement rm_related()") }
+sub add_related  { shift->throw_error("must implement add_related()") }
+sub rm_related   { shift->throw_error("must implement rm_related()") }
+sub put_related  { shift->throw_error("must implement put_related()") }
+sub find_related { shift->throw_error("must implement find_related()") }
 
 sub has_relationship {
     shift->throw_error("must implement has_relationship()");

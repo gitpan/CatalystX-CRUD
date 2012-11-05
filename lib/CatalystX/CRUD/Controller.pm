@@ -1,10 +1,12 @@
 package CatalystX::CRUD::Controller;
-use strict;
-use warnings;
-use base qw(
-    CatalystX::CRUD
-    Catalyst::Controller
-);
+use Moose;
+
+BEGIN {
+    extends qw(
+        CatalystX::CRUD
+        Catalyst::Controller
+    );
+}
 use Carp;
 use Catalyst::Utils;
 use CatalystX::CRUD::Results;
@@ -37,7 +39,10 @@ __PACKAGE__->config(
     naked_results         => 0,
 );
 
-our $VERSION = '0.53';
+# apply Role *after* we declare accessors above
+with 'CatalystX::CRUD::ControllerRole';
+
+our $VERSION = '0.54';
 
 =head1 NAME
 
@@ -171,103 +176,6 @@ sub fetch : Chained('/') PathPrefix CaptureArgs(1) {
     }
 }
 
-=head2 get_primary_key( I<context>, I<pk_value> )
-
-Should return an array of the name of the field(s) to fetch() I<pk_value> from
-and their respective values.
-
-The default behaviour is to return B<primary_key> and the
-corresponding value(s) from I<pk_value>.
-
-However, if you have other unique fields in your schema, you
-might return a unique field other than the primary key.
-This allows for a more flexible URI scheme.
-
-A good example is Users. A User record might have a numerical id (uid)
-and a username, both of which are unique. So if username 'foobar'
-has a B<primary_key> (uid) of '1234', both these URIs could fetch the same
-record:
-
- /uri/for/user/1234
- /uri/for/user/foobar
-
-Again, the default behaviour is to return the B<primary_key> field name(s)
-from config() (accessed via $self->primary_key) but you can override
-get_primary_key() in your subclass to provide more flexibility.
-
-If your primary key is composed of multiple columns, your return value
-should include all those columns and their values as extracted
-from I<pk_value>. Multiple values are assumed to be joined with C<;;>.
-See make_primary_key_string().
-
-=cut
-
-sub get_primary_key {
-    my ( $self, $c, $id ) = @_;
-    return () unless defined $id and length $id;
-    my $pk = $self->primary_key;
-    my @ret;
-    if ( ref $pk ) {
-        my @val = split( m/;;/, $id );
-        for my $col (@$pk) {
-            push( @ret, $col => shift(@val) );
-        }
-    }
-    else {
-        @ret = ( $pk => $id );
-    }
-    return @ret;
-}
-
-=head2 make_primary_key_string( I<object> )
-
-Using value of B<primary_string> constructs a URI-ready
-string based on values in I<object>. I<object> is often
-the value of:
- 
- $c->stash->{object}
-
-but could be any object that has accessor methods with
-the same names as the field(s) specified by B<primary_key>.
-
-Multiple values are joined with C<;;> and any C<;> or C</> characters
-in the column values are URI-escaped.
-
-=cut
-
-sub make_primary_key_string {
-    my ( $self, $obj ) = @_;
-    my $pk = $self->primary_key;
-    my $id;
-    if ( ref $pk ) {
-        my @vals;
-        for my $field (@$pk) {
-            my $v = scalar $obj->$field;
-            $v = '' unless defined $v;
-            $v =~ s/;/\%3b/g;
-            push( @vals, $v );
-        }
-
-        # if we had no vals, return undef
-        if ( !grep {length} @vals ) {
-            return $id;
-        }
-
-        $id = join( ';;', @vals );
-    }
-    else {
-        $id = $obj->$pk;
-    }
-
-    return $id unless defined $id;
-
-    # must escape any / in $id since passing it to uri_for as-is
-    # will break.
-    $id =~ s!/!\%2f!g;
-
-    return $id;
-}
-
 =head2 create
 
 Attribute: Local
@@ -393,13 +301,7 @@ save() returns 0 on any error, and returns 1 on success.
 sub save : PathPart Chained('fetch') Args(0) {
     my ( $self, $c ) = @_;
 
-    if ( !$self->allow_GET_writes ) {
-        if ( $c->req->method ne 'POST' ) {
-            $c->res->status(400);
-            $c->res->body('GET request not allowed');
-            return;
-        }
-    }
+    $self->_check_idempotent($c);
 
     if ($c->request->params->{'_delete'}
         or ( exists $c->request->params->{'x-tunneled-method'}
@@ -458,13 +360,7 @@ Calls the delete() method on the C<object>.
 
 sub rm : PathPart Chained('fetch') Args(0) {
     my ( $self, $c ) = @_;
-    if ( !$self->allow_GET_writes ) {
-        if ( $c->req->method ne 'POST' ) {
-            $c->res->status(400);
-            $c->res->body('GET request not allowed');
-            return;
-        }
-    }
+    $self->_check_idempotent($c);
     return if $self->has_errors($c);
     unless ( $self->can_write($c) ) {
         $self->throw_error('Permission denied');
@@ -606,11 +502,11 @@ on success.
 sub _check_idempotent {
     my ( $self, $c ) = @_;
     if ( !$self->allow_GET_writes ) {
-        if ( uc( $c->req->method ) ne 'POST' ) {
+        if ( uc( $c->req->method ) eq 'GET' ) {
             $c->log->warn( "allow_GET_writes!=true, related method="
                     . uc( $c->req->method ) );
             $c->res->status(405);
-            $c->res->header( 'Allow' => 'POST' );
+            $c->res->header( 'Allow' => 'POST,PUT,DELETE' );
             $c->res->body('GET request not allowed');
             $c->stash->{error} = 1;    # so has_errors() will return true
             return;
@@ -747,57 +643,8 @@ if set in config().
 sub new {
     my ( $class, $app_class, $args ) = @_;
     my $self = $class->next::method( $app_class, $args );
-
-    # if model_adapter class is defined, load and instantiate it.
-    if ( $self->model_adapter ) {
-        Catalyst::Utils::ensure_class_loaded( $self->model_adapter );
-        $self->model_adapter(
-            $self->model_adapter->new(
-                {   model_name => $self->model_name,
-                    model_meta => $self->model_meta,
-                    app_class  => $app_class,
-                }
-            )
-        );
-    }
+    $self->instantiate_model_adapter($app_class);
     return $self;
-}
-
-=head2 do_model( I<context>, I<method>, I<args> )
-
-Checks for presence of model_adapter() instance and calls I<method> on either model()
-or model_adapter() as appropriate.
-
-=cut
-
-sub do_model {
-    my $self   = shift;
-    my $c      = shift or $self->throw_error("context required");
-    my $method = shift or $self->throw_error("method required");
-    if ( $self->model_adapter ) {
-        return $self->model_adapter->$method( $self, $c, @_ );
-    }
-    else {
-        return $c->model( $self->model_name )->$method(@_);
-    }
-}
-
-=head2 model_can( I<context>, I<method_name> )
-
-Returns can() value from model_adapter() or model() as appropriate.
-
-=cut
-
-sub model_can {
-    my $self   = shift;
-    my $c      = shift or $self->throw_error("context required");
-    my $method = shift or $self->throw_error("method name required");
-    if ( $self->model_adapter ) {
-        return $self->model_adapter->can($method);
-    }
-    else {
-        return $c->model( $self->model_name )->can($method);
-    }
 }
 
 =head2 form

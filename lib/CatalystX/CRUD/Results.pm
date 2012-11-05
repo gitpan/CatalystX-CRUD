@@ -1,14 +1,19 @@
 package CatalystX::CRUD::Results;
-use strict;
-use warnings;
-use base qw( Class::Accessor::Fast );
+use Moose;
+with 'MooseX::Emulate::Class::Accessor::Fast';
 use Carp;
+use Data::Dump qw( dump );
 use MRO::Compat;
 use mro 'c3';
 
+#use overload
+#    '""'     => sub { return dump( $_[0]->serialize ) . "" },
+#    'bool'   => sub {1},
+#    fallback => 1;
+
 __PACKAGE__->mk_ro_accessors(qw( count pager query results ));
 
-our $VERSION = '0.53';
+our $VERSION = '0.54';
 
 =head1 NAME
 
@@ -70,6 +75,71 @@ sub next {
     else {
         return $self->results->next;
     }
+}
+
+=head2 TO_JSON
+
+Hook for the L<JSON> module so that you can pass a Results object
+directly to encode_json(). Calls serialize() internally.
+
+=cut
+
+sub TO_JSON {
+    my $self = shift;
+    return $self->serialize();
+}
+
+=head2 serialize
+
+Returns object as a hash ref. Objects are overloaded to call
+Data::Dump::dump( $results->serialize ) in string context.
+
+=cut
+
+sub serialize {
+    my $self = shift;
+
+    #dump $self;
+    my $r = { count => $self->count };
+
+    # what might query be?
+    my $q = $self->query;
+    if ( blessed($q) ) {
+        $r->{query} = "$q";
+    }
+    elsif ( ref $q eq 'CODE' ) {
+        $r->{query} = $q->();
+    }
+    else {
+        $q->{query_obj} .= "";  # stringify the Query object
+        $r->{query} = $q;
+    }
+
+    my @results;
+    if ( ref( $self->results ) eq 'ARRAY' ) {
+        @results = @{ $self->{results} };
+    }
+    else {
+        while ( my $i = $self->results->next ) {
+            push @results, $i;
+        }
+    }
+
+    # serialize results
+    my @serialized;
+    for my $i (@results) {
+        my $s;
+        if ( blessed($i) and $i->can('serialize') ) {
+            $s = $i->serialize;
+        }
+        else {
+            $s = "$i";
+        }
+        push @serialized, $s;
+    }
+    $r->{results} = \@serialized;
+
+    return $r;
 }
 
 1;

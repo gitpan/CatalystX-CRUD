@@ -1,3 +1,5 @@
+#!/usr/bin/env perl
+
 use Test::More tests => 40;
 use strict;
 use lib qw( lib t/lib );
@@ -59,6 +61,7 @@ like( $res->content, qr/content => "foo bar baz"/, "update file" );
 # test for default()
 ok( $res = request('/file/testfile'), "get /file/testfile" );
 
+#diag( $res->content );
 is( $res->code, 404, "default is 404" );
 
 # create related file

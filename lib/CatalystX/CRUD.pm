@@ -4,7 +4,7 @@ use warnings;
 use strict;
 use Carp;
 
-our $VERSION = '0.53';
+our $VERSION = '0.54';
 
 =head1 NAME
 
@@ -39,7 +39,10 @@ C<error> value in stash() is set. Otherwise returns false (no errors).
 sub has_errors {
     my $self = shift;
     my $c = shift or $self->throw_error("context object required");
-    return scalar( @{ $c->error } ) || $c->stash->{error} || 0;
+    return
+           scalar( @{ $c->error } )
+        || $c->stash->{error}
+        || 0;
 }
 
 =head2 throw_error( I<msg> )

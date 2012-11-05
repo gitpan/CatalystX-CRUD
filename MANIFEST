@@ -1,6 +1,7 @@
 Changes
 lib/CatalystX/CRUD.pm
 lib/CatalystX/CRUD/Controller.pm
+lib/CatalystX/CRUD/ControllerRole.pm
 lib/CatalystX/CRUD/Iterator.pm
 lib/CatalystX/CRUD/Iterator/File.pm
 lib/CatalystX/CRUD/Model.pm

@@ -6,9 +6,9 @@ use Carp;
 use Data::Dump;
 use mro 'c3';
 
-__PACKAGE__->mk_accessors( qw( form_fields ) );
+__PACKAGE__->mk_accessors(qw( form_fields ));
 
-our $VERSION = '0.53';
+our $VERSION = '0.54';
 
 =head1 NAME
 
@@ -115,6 +115,7 @@ with contents of $c->error.
 
 sub end : Private {
     my ( $self, $c ) = @_;
+    $c->log->debug('test controller end()') if $c->debug;
     if ( defined $c->stash->{object} ) {
         $c->res->body( $self->serialize_object( $c, $c->stash->{object} ) );
     }

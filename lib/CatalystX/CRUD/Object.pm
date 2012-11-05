@@ -1,18 +1,18 @@
 package CatalystX::CRUD::Object;
-use strict;
-use warnings;
 use Moose;
 with 'MooseX::Emulate::Class::Accessor::Fast';
 with 'Catalyst::ClassData';
-use base qw( CatalystX::CRUD );
+use base 'CatalystX::CRUD';
+
 use Carp;
+use Data::Dump qw( dump );
 use MRO::Compat;
 use mro 'c3';
 
 __PACKAGE__->mk_ro_accessors(qw( delegate ));
 __PACKAGE__->mk_classdata('delegate_class');
 
-our $VERSION = '0.53';
+our $VERSION = '0.54';
 
 =head1 NAME
 
@@ -102,6 +102,40 @@ sub create { shift->throw_error("must implement create") }
 sub read   { shift->throw_error("must implement read") }
 sub update { shift->throw_error("must implement update") }
 sub delete { shift->throw_error("must implement delete") }
+
+=head2 is_new
+
+Return results should be boolean indicating whether the object
+already exists or not. Expectation is code like:
+
+ if ($object->is_new) {
+     $object->create;
+ }
+ else {
+     $object->update;
+ }
+
+=cut
+
+sub is_new { shift->throw_error("must implement is_new") }
+
+=head2 serialize
+
+Stringify the object. This class overloads the string operators
+to call this method.
+
+Your delegate class should implement a serialize() method
+or stringify to something useful.
+
+=cut
+
+sub serialize {
+    my $self = shift;
+    return "" unless defined $self->delegate;
+    return $self->delegate->can('serialize')
+        ? $self->delegate->serialize
+        : $self->delegate . "";
+}
 
 =head2 AUTOLOAD
 

@@ -9,7 +9,7 @@ use base qw(
     Catalyst::Model
 );
 
-our $VERSION = '0.53';
+our $VERSION = '0.54';
 
 __PACKAGE__->mk_accessors(qw( object_class page_size ));
 
@@ -256,6 +256,12 @@ via the relationship I<rel_name>.
 
 It is up to the subclass to implement this method.
 
+=item put_related( I<obj>, I<rel_name>, I<foreign_value> )
+
+Create new related foreign object. Unlike add_related(),
+the foreign object need not already exist. put_related()
+should be idempotent.
+
 =item remove_related
 
 remove_related() is an alias for rm_related().
@@ -281,6 +287,7 @@ sub add_related { shift->throw_error("must implement add_related()") }
 sub rm_related  { shift->throw_error("must implement rm_related()") }
 *remove_related = \&rm_related;
 sub find_related { shift->throw_error("must implement view_related()") }
+sub put_related  { shift->throw_error("must implement put_related()") }
 
 sub has_relationship {
     shift->throw_error("must implement has_relationship()");

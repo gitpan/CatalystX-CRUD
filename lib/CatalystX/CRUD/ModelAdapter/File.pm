@@ -3,7 +3,7 @@ use strict;
 use warnings;
 use base qw( CatalystX::CRUD::ModelAdapter );
 
-our $VERSION = '0.53';
+our $VERSION = '0.54';
 
 =head1 NAME
 
@@ -32,7 +32,7 @@ Only new or overridden methods are documented here.
 
 =cut
 
-=head2 new_object( I<context>, I<args> )
+=head2 new_object( I<controller>, I<context>, I<args> )
 
 Implements required method.
 
@@ -44,7 +44,7 @@ sub new_object {
     $model->new_object(@arg);
 }
 
-=head2 fetch( I<context>, I<args> )
+=head2 fetch( I<controller>, I<context>, I<args> )
 
 Implements required method.
 
@@ -54,6 +54,18 @@ sub fetch {
     my ( $self, $controller, $c, @arg ) = @_;
     my $model = $c->model( $self->model_name );
     $model->fetch(@arg);
+}
+
+=head2 prep_new_object( I<controller>, I<context>, I<file> )
+
+Implements required method.
+
+=cut
+
+sub prep_new_object {
+    my ( $self, $controller, $c, $file ) = @_;
+    my $model = $c->model( $self->model_name );
+    $model->prep_new_object($file);
 }
 
 =head2 search( I<context>, I<args> )

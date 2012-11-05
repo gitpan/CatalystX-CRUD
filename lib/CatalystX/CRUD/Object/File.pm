@@ -13,7 +13,7 @@ use overload(
 __PACKAGE__->mk_accessors(qw( content file ));
 __PACKAGE__->delegate_class('Path::Class::File');
 
-our $VERSION = '0.53';
+our $VERSION = '0.54';
 
 =head1 NAME
 
@@ -46,8 +46,8 @@ sub new {
     my $class = shift;
     my $self  = $class->next::method(@_);
     my $file  = $self->{file} or $self->throw_error("file param required");
-    $self->{delegate}
-        ||= $self->delegate_class->new( ref $file eq 'ARRAY' ? @$file : $file );
+    $self->{delegate} ||= $self->delegate_class->new(
+        ref $file eq 'ARRAY' ? @$file : $file );
     return $self;
 }
 
@@ -119,6 +119,17 @@ sub delete {
     return $self->delegate->remove;
 }
 
+=head2 is_new
+
+Returns true if the file does not yet exist.
+
+=cut
+
+sub is_new {
+    my $self = shift;
+    return defined -s $self->delegate ? 0 : 1;
+}
+
 sub _write {
     my $self = shift;
     my $dir  = $self->delegate->dir;
@@ -127,8 +138,20 @@ sub _write {
     print {$fh} $self->content;
     $fh->close;
 
-    #warn "file written to $self";
+    #warn length($self->content) . " bytes written to $self";
+
     return -s $self->delegate;
+}
+
+=head2 serialize
+
+Returns the File object as a hashref with 2 keys: file and content.
+
+=cut
+
+sub serialize {
+    my $self = shift;
+    return { file => $self->file, content => $self->content };
 }
 
 1;

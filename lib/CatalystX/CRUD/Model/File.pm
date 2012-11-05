@@ -10,7 +10,7 @@ use mro 'c3';
 
 __PACKAGE__->mk_accessors(qw( inc_path ));
 
-our $VERSION = '0.53';
+our $VERSION = '0.54';
 
 # test whether symlink() works at compile time
 my $SYMLINK_SUPPORTED = eval { symlink( "", "" ); 1 };
@@ -72,16 +72,38 @@ Read I<path/to/file> from disk and return a CXCO::File object.
 
 I<path/to/file> is assumed to be in C<inc_path>
 
-If I<path/to/file> is empty or cannot be found, the
+If I<path/to/file> is empty, the
 CatalystX::CRUD::Object::File object is returned but its content()
 will be undef. If its parent dir is '.', its dir() 
 will be set to the first item in inc_path().
+
+If I<path/to/file> is not found, undef is returned.
 
 =cut
 
 sub fetch {
     my $self = shift;
     my $file = $self->new_object(@_);
+    $file = $self->prep_new_object($file);
+    return defined -s $file ? $file : undef;
+}
+
+=head2 prep_new_object( I<file> )
+
+Searches inc_path() and calls I<file> read() method
+if file is found.
+
+Also verifies that the delegate() has an absolute path set.
+
+Called internally by fetch().
+
+Returns I<file>.
+
+=cut
+
+sub prep_new_object {
+    my $self = shift;
+    my $file = shift or croak "file required";
 
     # look through inc_path
     for my $dir ( @{ $self->inc_path } ) {
@@ -105,7 +127,6 @@ sub fetch {
     }
 
     #carp dump $file;
-
     return $file;
 }
 
@@ -126,7 +147,12 @@ Returns a I<wanted> subroutine suitable for File::Find.
 
 sub make_query {
     my ($self) = @_;
-    return sub {1};
+    return sub {
+        my ( $root, $dir, $f ) = @_;
+        return 0
+            if $dir and $dir =~ m!/\.(svn|git)!;
+        return 1;
+    };
 }
 
 =head2 search( I<filter_CODE> )
@@ -243,14 +269,15 @@ sub iterator_related {
     }
 }
 
-=head2 add_related( I<file>, I<rel_name>, I<other_file_name> )
+=head2 add_related( I<file>, I<rel_name>, I<other_file_name>, I<overwrite> )
 
 For I<rel_name> of "dir" will create a symlink for I<other_file_name>'s
 basename to I<file> in the same directory as I<file>.
 
 If a file already exists for I<other_file_name> in the same
 dir as I<file> will throw an error indicating the relationship
-already exists.
+already exists. To stop the error being thrown, pass a true
+value for the I<overwrite> param.
 
 If the symlink fails, will throw_error().
 
@@ -260,7 +287,7 @@ to the Catalyst log.
 =cut
 
 sub add_related {
-    my ( $self, $file, $rel_name, $other_file_name ) = @_;
+    my ( $self, $file, $rel_name, $other_file_name, $overwrite ) = @_;
 
     if ( !$SYMLINK_SUPPORTED ) {
         $self->context->log->error(
@@ -278,6 +305,9 @@ sub add_related {
 
         # if in the same dir, already related.
         if ( $other_file->dir eq $file->dir ) {
+            if ($overwrite) {
+                return 1;    # nothing to do
+            }
             $self->throw_error("relationship already exists");
         }
 
@@ -292,6 +322,19 @@ sub add_related {
     else {
         $self->throw_error("unsupported relationship name: $rel_name");
     }
+
+    return $other_file;
+}
+
+=head2 put_related( I<file>, I<rel_name>, I<other_file_name> )
+
+Calls add_related() with overwrite option.
+
+=cut
+
+sub put_related {
+    my $self = shift;
+    return $self->add_related( @_, 1 );    # overwrite
 }
 
 =head2 rm_related( I<file>, I<rel_name>, I<other_file_name> )
