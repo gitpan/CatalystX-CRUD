@@ -13,7 +13,7 @@ use mro 'c3';
 
 __PACKAGE__->mk_ro_accessors(qw( count pager query results ));
 
-our $VERSION = '0.54';
+our $VERSION = '0.55';
 
 =head1 NAME
 

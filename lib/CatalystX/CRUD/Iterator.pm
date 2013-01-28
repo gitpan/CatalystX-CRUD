@@ -4,7 +4,7 @@ use warnings;
 use Carp;
 use base qw( CatalystX::CRUD );
 
-our $VERSION = '0.54';
+our $VERSION = '0.55';
 
 =head1 NAME
 
@@ -113,6 +113,27 @@ sub finish {
         return $self->{iterator}->finish;
     }
     return 1;
+}
+
+=head2 serialize
+
+Returns array ref of all objects, having called
+serialize() on each one. Short-hand for:
+
+ my $objects = [];
+ while ( my $o = $iterator->next ) {
+     push @$objects, $o->serialize();
+ }
+
+=cut
+
+sub serialize {
+    my $self    = shift;
+    my $objects = [];
+    while ( my $o = $self->next ) {
+        push @$objects, $o->serialize();
+    }
+    return $objects;
 }
 
 1;

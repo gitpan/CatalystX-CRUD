@@ -30,4 +30,4 @@ requires:
   Search::QueryParser::SQL: 0.005
   Sort::SQL: 0.07
   Test::More: 0
-version: 0.54
+version: 0.55

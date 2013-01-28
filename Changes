@@ -254,9 +254,13 @@ Revision history for CatalystX-CRUD
 0.53    31 Oct 2012
         * add list_related and view_related primarily for REST support
 
-0.54    xxx
+0.54    5 Nov 2012
         * add Results->serialize() method
         * refactor some Controller methods into a Role class
         * Model::File->fetch() now returns undef if file does not exist. Add Model::File->prep_new_object().
         * add new required method to Object class: is_new()
         * add Model->put_related method
+
+0.55    28 Jan 2013
+        * add Iterator->serialize() method.
+
