@@ -7,9 +7,9 @@ use Data::Pageset;
 use Search::QueryParser::SQL;
 use Carp;
 
-__PACKAGE__->mk_accessors(qw( use_ilike ne_sign ));
+__PACKAGE__->mk_accessors(qw( use_ilike use_lower ne_sign ));
 
-our $VERSION = '0.55';
+our $VERSION = '0.56';
 
 =head1 NAME
 
@@ -150,7 +150,7 @@ sub _which_sort {
 sub make_sql_query {
     my $self = shift;
     my $c    = $self->context;
-    my $field_names 
+    my $field_names
         = shift
         || $c->req->params->{'cxc-query-fields'}
         || $c->controller->field_names($c)
@@ -173,7 +173,7 @@ sub make_sql_query {
     my $sp     = Sort::SQL->string2array( $self->_which_sort($c) );
     my $s      = join( ', ', map { join( ' ', %$_ ) } @$sp );
     my $offset = $params->{'cxc-offset'} || $params->{'_offset'};
-    my $page_size 
+    my $page_size
         = $params->{'cxc-page_size'}
         || $params->{'_page_size'}
         || $c->controller->page_size
@@ -248,7 +248,7 @@ sub params_to_sql_query {
     my ( $self, $field_names ) = @_;
     croak "field_names ARRAY ref required"
         unless defined $field_names
-            and ref($field_names) eq 'ARRAY';
+        and ref($field_names) eq 'ARRAY';
     my $c = $self->context;
     my ( @sql, %pq );
     my $ne = $self->ne_sign || '!=';
@@ -303,14 +303,16 @@ sub params_to_sql_query {
 
             next unless grep {m/\S/} @v;
 
-            # we don't want to "double encode" $like because it will
-            # be re-parsed as a word not an op, so we have our a modified
+            # we don't want to "double encode" $like
+            # or $use_lower because it will
+            # be re-parsed as a word not an op, so we have a modified
             # parser for per-field queries.
             my %args = (
                 like    => '=',
                 fuzzify => $fuzzy,
                 columns => \%columns,
                 strict  => 1,
+                rxOp    => qr/==|<=|>=|!=|=~|!~|=|<|>|~/,
             );
             if ($fuzzy2) {
                 delete $args{fuzzify};
@@ -339,6 +341,7 @@ sub params_to_sql_query {
         my %args = (
             like           => $like,
             fuzzify        => $fuzzy,
+            lower          => $self->use_lower,
             columns        => \%columns,
             default_column => (
                 @default_columns
@@ -346,6 +349,7 @@ sub params_to_sql_query {
                 : [ keys %columns ]
             ),
             strict => 1,
+            rxOp   => qr/==|<=|>=|!=|=~|!~|=|<|>|~/,
 
         );
         if ($fuzzy2) {

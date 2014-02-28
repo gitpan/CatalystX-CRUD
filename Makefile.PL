@@ -20,7 +20,7 @@ WriteMakefile(
         'MooseX::Emulate::Class::Accessor::Fast' => 0,
         'Data::Dump'            => 0,  # for testing
         'Sort::SQL'             => 0.07,
-        'Search::QueryParser::SQL' => 0.005,
+        'Search::QueryParser::SQL' => 0.010,
 
     },
     dist                => { COMPRESS => 'gzip -9f', SUFFIX => 'gz', },

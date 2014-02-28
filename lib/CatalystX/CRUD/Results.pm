@@ -13,7 +13,7 @@ use mro 'c3';
 
 __PACKAGE__->mk_ro_accessors(qw( count pager query results ));
 
-our $VERSION = '0.55';
+our $VERSION = '0.56';
 
 =head1 NAME
 
@@ -111,7 +111,11 @@ sub serialize {
         $r->{query} = $q->();
     }
     else {
-        $q->{query_obj} .= "";  # stringify the Query object
+        # stringify the Query object, overwrite 'query'.
+        # we do this because some internal objects do not serialize.
+        delete $q->{query};
+        $q->{where} = delete $q->{query_obj};
+        $q->{where} .= '';
         $r->{query} = $q;
     }
 
